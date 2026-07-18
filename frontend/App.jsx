@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
-import DataMasterHubScreen from './screens/DataMasterHubScreen';
+import DataMasterHubScreen from './screens/DataMasterHub';
 import DaftarBarangScreen from './screens/DaftarBarangScreen';
 import StubScreen from './screens/StubScreen';
 
