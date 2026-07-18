@@ -1,76 +1,56 @@
 import React from 'react';
 import InventoryRowReadOnly from './InventoryRowReadOnly';
-import InventoryRowEdit from './InventoryRowEdit';
-import TableLoading from '../common/TableLoading';
 
+/**
+ * InventoryTable
+ * Renders table of barang items with full-page edit support only
+ * All rows are read-only; clicking Edit button opens full-page edit screen
+ */
 export default function InventoryTable({ 
   items, 
-  loading, 
-  editingId, 
-  formState, 
-  isConflict,
-  onEditChange, 
-  onSave, 
-  onCancel, 
-  onActivateEdit 
+  loading,
+  onEditFullPage  // ← Callback to navigate to edit screen with item id
 }) {
-  const headers = [
-    { label: 'Kode', align: 'pl-5' },
-    { label: 'Nama' },
-    { label: 'Kategori' },
-    { label: 'Mitra' },
-    { label: 'Lok. Display', align: 'text-center' },
-    { label: 'Lok. Gudang', align: 'text-center' },
-    { label: 'Stok', align: 'text-center' },
-    { label: 'Modal', align: 'text-right' },
-    { label: 'P1', align: 'text-right' },
-    { label: 'P2', align: 'text-right' },
-    { label: 'P3', align: 'text-right text-blue-400' },
-    { label: 'P4', align: 'text-right text-indigo-400' },
-    { label: 'Aksi', align: 'text-center pr-5' }
-  ];
-
   return (
-    <div className="bg-[#141923] border border-[#1f293d] rounded-xl overflow-hidden shadow-2xl selection:bg-transparent">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse whitespace-nowrap">
-          <thead>
-            <tr className="bg-[#111622] border-b border-[#1f293d] text-slate-400 font-mono text-[11px] font-semibold tracking-wider uppercase">
-              {headers.map((h, i) => (
-                <th key={i} className={`py-3 px-4 ${h.align || ''}`}>{h.label}</th>
-              ))}
+    <div className="overflow-x-auto rounded-lg border border-[#1f293d]">
+      <table className="w-full text-sm">
+        <thead className="bg-[#141923] border-b border-[#1f293d]">
+          <tr>
+            <th className="py-3 px-4 pl-5 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Kode</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Nama</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Kategori</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Mitra</th>
+            <th className="py-3 px-4 text-center text-xs font-semibold uppercase tracking-wider text-slate-400">Lok. Display</th>
+            <th className="py-3 px-4 text-center text-xs font-semibold uppercase tracking-wider text-slate-400">Lok. Gudang</th>
+            <th className="py-3 px-4 text-center text-xs font-semibold uppercase tracking-wider text-slate-400">Stok</th>
+            <th className="py-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Modal</th>
+            <th className="py-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">P1</th>
+            <th className="py-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">P2</th>
+            <th className="py-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">P3</th>
+            <th className="py-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">P4</th>
+            <th className="py-3 px-5 text-center text-xs font-semibold uppercase tracking-wider text-slate-400">Aksi</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-[#1f293d]">
+          {loading ? (
+            <tr>
+              <td colSpan="13" className="py-8 text-center text-slate-400">Loading...</td>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-[#1f293d]/40 text-xs font-medium text-slate-300">
-            {loading ? (
-              <TableLoading rows={4} />
-            ) : items.length === 0 ? (
-              <tr>
-                <td colSpan="13" className="py-12 text-center text-slate-500 text-xs">No records found matching target parameters.</td>
-              </tr>
-            ) : (
-              items.map((item) => (
-                editingId === item.id ? (
-                  <InventoryRowEdit 
-                    key={item.id}
-                    formState={formState}
-                    onChange={onEditChange}
-                    onSave={onSave}
-                    onCancel={onCancel}
-                  />
-                ) : (
-                  <InventoryRowReadOnly 
-                    key={item.id}
-                    item={item}
-                    onEdit={onActivateEdit}
-                    isConflictActive={isConflict}
-                  />
-                )
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+          ) : items.length === 0 ? (
+            <tr>
+              <td colSpan="13" className="py-8 text-center text-slate-400">Tidak ada data</td>
+            </tr>
+          ) : (
+            items.map((item) => (
+              <InventoryRowReadOnly
+                key={item.id}
+                item={item}
+                onEditFullPage={onEditFullPage}
+              />
+            ))
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }

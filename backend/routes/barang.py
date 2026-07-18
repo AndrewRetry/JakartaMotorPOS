@@ -49,8 +49,87 @@ def get_items():
         "last_mutation_time": get_mutation_time("barang")
     }), 200
 
+@barang_bp.route('/api/barang/<item_id>', methods=['GET'])
+def get_item_by_id(item_id):
+    """
+    Fetch a single item by ID for the edit screen.
+    Returns full item details including version for OCC.
+    """
+    try:
+        all_records = db.get_all() or []
+        item = next((record for record in all_records if record.get('id') == item_id), None)
+        
+        if not item:
+            return jsonify({"status": "error", "message": "Item tidak ditemukan"}), 404
+        
+        return jsonify(item), 200
+    except Exception as err:
+        return jsonify({"status": "error", "message": str(err)}), 500
+
 @barang_bp.route('/api/barang/update', methods=['POST'])
 def update_item():
+    """
+    Update item without OCC (Optimistic Concurrency Control).
+    Simply overwrites the row - no version checking.
+    """
+    body = request.json or {}
+    target_id = body.get('id')
+    
+    if not target_id:
+        return jsonify({"status": "error", "message": "Missing 'id'"}), 400
+ 
+    # Capture all form fields
+    updated_fields = {
+        "kode": body.get('kode'),
+        "nama": body.get('nama'),
+        "categoryId": body.get('categoryId'),
+        "mitra": body.get('mitra'),
+        "tipe": body.get('tipe'),
+        "stok": body.get('stok'),
+        "modal": body.get('modal'),
+        "p1": body.get('p1'),
+        "p2": body.get('p2'),
+        "p3": body.get('p3'),
+        "p4": body.get('p4'),
+        "lokasiItem": body.get('lokasiItem'),
+        "lokasiStock": body.get('lokasiStock'),
+        "notes": body.get('notes')
+    }
+    
+    try:
+        res, status_code = db.update_row_simple(target_id, updated_fields)
+        return jsonify(res), status_code
+    except Exception as err:
+        return jsonify({"status": "error", "message": str(err)}), 500
+    """Update item without version checking (no OCC)."""
+    body = request.json or {}
+    target_id = body.get('id')
+    
+    if not target_id:
+        return jsonify({"status": "error", "message": "Missing 'id'"}), 400
+
+    updated_fields = {
+        "kode": body.get('kode'),
+        "nama": body.get('nama'),
+        "categoryId": body.get('categoryId'),
+        "mitra": body.get('mitra'),
+        "tipe": body.get('tipe'),
+        "stok": body.get('stok'),
+        "modal": body.get('modal'),
+        "p1": body.get('p1'),
+        "p2": body.get('p2'),
+        "p3": body.get('p3'),
+        "p4": body.get('p4'),
+        "lokasiItem": body.get('lokasiItem'),
+        "lokasiStock": body.get('lokasiStock'),
+        "notes": body.get('notes')
+    }
+    
+    try:
+        res = db.update_row_simple(target_id, updated_fields)
+        return jsonify(res), 200
+    except Exception as err:
+        return jsonify({"status": "error", "message": str(err)}), 500
     """Processes real-time form edits safely using version checking."""
     body = request.json or {}
     target_id = body.get('id')

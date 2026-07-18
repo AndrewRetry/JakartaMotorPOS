@@ -1,6 +1,11 @@
 import React from 'react';
 
-export default function InventoryRowReadOnly({ item, onEdit, isConflictActive }) {
+/**
+ * InventoryRowReadOnly
+ * Table row showing item data in read-only mode
+ * Action column contains only: Edit (full-page) and Delete buttons
+ */
+export default function InventoryRowReadOnly({ item, onEditFullPage, isConflictActive }) {
   const stockNum = parseInt(item.stok || 0);
   const formatNumber = (val) => parseInt(val || 0).toLocaleString('id-ID');
 
@@ -24,14 +29,20 @@ export default function InventoryRowReadOnly({ item, onEdit, isConflictActive })
       <td className="py-3 px-4 text-right font-mono text-indigo-400">{formatNumber(item.p4)}</td>
       <td className="py-3 px-5 text-center">
         <div className="flex items-center justify-center gap-1 opacity-80 group-hover:opacity-100 transition-all">
+          {/* Edit Button - Opens Full Page Edit Screen */}
           <button 
-            onClick={() => onEdit(item)} 
-            disabled={isConflictActive}
-            className="px-3 py-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-30 disabled:pointer-events-none text-white font-bold rounded text-[10px] transition-all"
+            onClick={() => onEditFullPage(item.id)}
+            className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded text-[10px] transition-all"
+            title="Edit item"
           >
             Edit
           </button>
-          <button className="px-2 py-1 bg-red-600/30 hover:bg-red-600 text-red-400 hover:text-white rounded text-[10px] transition-all">
+          
+          {/* Delete Button */}
+          <button 
+            className="px-2 py-1 bg-red-600/30 hover:bg-red-600 text-red-400 hover:text-white rounded text-[10px] transition-all"
+            title="Delete item"
+          >
             🗑️
           </button>
         </div>

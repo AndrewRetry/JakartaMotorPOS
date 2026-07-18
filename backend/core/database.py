@@ -60,3 +60,40 @@ class CSVEngine:
 
             update_mutation_time(entity_name)
             return {"status": "success", "new_version": row['version']}, 200
+        
+    def update_row_simple(self, target_id: str, updated_fields: dict):
+        """
+        Simple update without version checking (no OCC).
+        Last-write-wins approach.
+        """
+        entity_name = os.path.basename(self.file_path).replace('.csv', '')
+        
+        with self.lock:
+            rows = self._read_rows()
+            if not rows:
+                return {"status": "error", "message": "Table is empty or missing"}, 404
+
+            headers = list(rows[0].keys())
+            updated = False
+
+            for row in rows:
+                if str(row.get(self.id_col)) == str(target_id):
+                    # Update only the provided fields
+                    for key, val in updated_fields.items():
+                        if key in row and val is not None:
+                            row[key] = str(val)
+                    
+                    updated = True
+                    break
+
+            if not updated:
+                return {"status": "error", "message": f"Record with ID {target_id} not found"}, 404
+
+            # Write back to CSV
+            with open(self.file_path, mode='w', newline='', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, fieldnames=headers)
+                writer.writeheader()
+                writer.writerows(rows)
+
+            update_mutation_time(entity_name)
+            return {"status": "success", "message": "Item updated"}, 200
