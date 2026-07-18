@@ -5,94 +5,102 @@ import ConflictBanner from '../components/common/ConflictBanner';
 import { Icons } from '../components/common/Icons';
 
 export default function DaftarBarangScreen({ onBack }) {
-  const [rawItems, setRawItems] = useState([]);
+  // Operational Core States
   const [displayItems, setDisplayItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
   
-  // Inline Mutation States
+  // Server-Side Chunking Boundaries
+  const [currentPage, setCurrentPage] = useState(0);
+  const itemsPerPage = 50;
+
+  // Optimistic Concurrency Control (OCC) Form States
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [conflictMessage, setConflictMessage] = useState(null); 
   
+  // Track system mutation clock strictly in RAM memory
   const serverVersionPointer = useRef(0.0);
 
-  const fetchDataset = async (showLoader = true) => {
+  /**
+   * Centralized API Fetch Engine
+   * Requests sliced data subsets from the Flask CSV reader engine
+   */
+  const fetchDataset = async (showLoader = true, targetQuery = searchQuery, targetPage = currentPage) => {
     try {
       if (showLoader) setLoading(true);
-      const res = await fetch('/api/barang');
+      
+      const offset = targetPage * itemsPerPage;
+      const url = `/api/barang?q=${encodeURIComponent(targetQuery)}&limit=${itemsPerPage}&offset=${offset}`;
+      
+      const res = await fetch(url);
       const payload = await res.json();
-      const records = payload.data || [];
-      setRawItems(records);
-      setDisplayItems(records);
-      serverVersionPointer.current = payload.last_mutation_time || 0.0;
+      
+      setDisplayItems(payload.data || []);
+      setTotalCount(payload.total || 0);
+      
+      // Update global sync anchor timestamp safely without causing UI re-renders
+      if (payload.last_mutation_time) {
+        serverVersionPointer.current = payload.last_mutation_time;
+      }
       setConflictMessage(null);
     } catch (err) {
-      console.error("Flat-file data access channel dropped:", err);
+      console.error("API communications channel link severed:", err);
     } finally {
       if (showLoader) setLoading(false);
     }
   };
 
-  // Sync Background Daemon Loop
+  /**
+   * ⏱️ Debounce Interface Layer
+   * Pauses 300ms after the user stops typing before making the backend API request.
+   * Prevents every individual keystroke from thrashing the flat CSV file on the server.
+   */
   useEffect(() => {
-    fetchDataset(true);
+    const typingDelayTimer = setTimeout(() => {
+      setCurrentPage(0); // Snap back to first data segment page on new keywords
+      fetchDataset(true, searchQuery, 0);
+    }, 300);
 
-    const daemonPoller = setInterval(async () => {
+    return () => clearTimeout(typingDelayTimer);
+  }, [searchQuery]);
+
+  /**
+   * 🔄 Lightweight Synchronization Check Loop
+   * Periodically hits the lightweight endpoint to check if the CSV file timestamp changed.
+   */
+  useEffect(() => {
+    const syncDaemon = setInterval(async () => {
       try {
-        setSyncing(true);
-        const res = await fetch('/api/sync-check');
+        // Halt synchronization checks if the user is in the middle of modifying a form line
+        if (editingId) return; 
+
+        const res = await fetch(`/api/barang/sync-check?last_sync=${serverVersionPointer.current}`);
         const state = await res.json();
-        const freshServerStamp = state.matrix?.barang || 0.0;
         
-        if (freshServerStamp > serverVersionPointer.current && !editingId) {
-          await fetchDataset(false);
+        if (state.needs_refresh) {
+          await fetchDataset(false); // Silent background data update
         }
       } catch (e) {
-        console.warn("Background channel dropped:", e);
-      } finally {
-        setTimeout(() => setSyncing(false), 300);
+        console.warn("Background sync connection dropped momentarily:", e);
       }
-    }, 5000);
+    }, 4000);
 
-    return () => clearInterval(daemonPoller);
-  }, [editingId]);
+    return () => clearInterval(syncDaemon);
+  }, [editingId, currentPage, searchQuery]);
 
-  // 🔥 High-Performance Tokenized Multi-Term Substring Engine
-  useEffect(() => {
-    const cleanQuery = searchQuery.toLowerCase().trim();
-    
-    // Short-circuit execution if input field is empty
-    if (!cleanQuery) {
-      setDisplayItems(rawItems);
-      return;
-    }
+  // Pagination Link Click Event Handler
+  const handlePageNavigation = (newPageIndex) => {
+    setCurrentPage(newPageIndex);
+    fetchDataset(true, searchQuery, newPageIndex);
+  };
 
-    // Split input into array fragments using space delimiter pattern
-    const searchTokens = cleanQuery.split(/\s+/).filter(Boolean);
-
-    const filtered = rawItems.filter((item) => {
-      const targetKode = (item.kode || '').toLowerCase();
-      const targetNama = (item.nama || '').toLowerCase();
-      const targetKategori = (item.categoryId || '').toLowerCase();
-
-      // Relational AND validation check: each token must reside somewhere in this row's targets
-      return searchTokens.every((token) => {
-        return (
-          targetKode.includes(token) ||
-          targetNama.includes(token) ||
-          targetKategori.includes(token)
-        );
-      });
-    });
-
-    setDisplayItems(filtered);
-  }, [searchQuery, rawItems]);
-
+  // Inline Editing Form Handlers
   const handleEditInit = (item) => {
     setEditingId(item.id);
-    setEditForm({ ...item });
+    // Deep copy target row contents along with its unique hidden 'version' attribute
+    setEditForm({ ...item }); 
     setConflictMessage(null);
   };
 
@@ -100,6 +108,10 @@ export default function DaftarBarangScreen({ onBack }) {
     setEditForm(prev => ({ ...prev, [key]: val }));
   };
 
+  /**
+   * POST Mutation Submissions Handler
+   * Ships modified columns along with the original client-side version tag
+   */
   const executeWriteCommit = async () => {
     try {
       const res = await fetch('/api/barang/update', {
@@ -111,11 +123,12 @@ export default function DaftarBarangScreen({ onBack }) {
 
       if (res.status === 200) {
         setEditingId(null);
-        await fetchDataset(false);
+        await fetchDataset(false); // Grab fresh changes from server silently
       } else if (res.status === 409) {
-        setConflictMessage(outcome.message);
+        // ⚠️ OCC Trigger: Version mismatch detected on backend
+        setConflictMessage(outcome.message || "Another user modified this item concurrently.");
       } else {
-        alert(`Mutation Fail: ${outcome.message}`);
+        alert(`Mutation Failed: ${outcome.message}`);
       }
     } catch {
       alert("Network processing path execution error.");
@@ -123,7 +136,7 @@ export default function DaftarBarangScreen({ onBack }) {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6">
       <button onClick={onBack} className="text-[10px] font-bold text-blue-500 hover:text-blue-400 flex items-center gap-1 uppercase tracking-wider transition-all">
         ← Kembali ke Master Hub
       </button>
@@ -133,18 +146,13 @@ export default function DaftarBarangScreen({ onBack }) {
           <div className="p-2.5 bg-blue-600/10 text-blue-500 rounded-xl"><Icons.Master /></div>
           <div>
             <h2 className="text-lg font-bold text-slate-100">Data Barang</h2>
-            <p className="text-xs text-slate-400 mt-0.5">Total count: <span className="text-blue-500 font-bold font-mono">{displayItems.length}</span> items</p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Showing <span className="text-blue-500 font-bold font-mono">{displayItems.length}</span> of <span className="text-slate-300 font-bold font-mono">{totalCount}</span> matched database elements
+            </p>
           </div>
-        </div>
-        <div className="flex items-center gap-2 self-end sm:self-center">
-          <button className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold tracking-wide shadow-sm transition-all">+ Tambah Barang</button>
-          <button onClick={() => fetchDataset(true)} className="flex items-center gap-1.5 px-4 py-2 bg-[#4c3ce6] hover:bg-[#5b4df2] text-white rounded-xl text-xs font-bold tracking-wide shadow-sm transition-all">
-            {syncing ? <Icons.Refresh /> : '↻'} Refresh
-          </button>
         </div>
       </div>
 
-      {/* Embedded High Density Query Components */}
       <SearchFilterBar 
         query={searchQuery} 
         onQueryChange={setSearchQuery} 
@@ -164,6 +172,29 @@ export default function DaftarBarangScreen({ onBack }) {
         onCancel={() => setEditingId(null)}
         onActivateEdit={handleEditInit}
       />
+
+      {/* 🧭 Server-Side Micro-Pagination Navigation Block */}
+      {totalCount > itemsPerPage && (
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800/60">
+          <button 
+            disabled={currentPage === 0 || loading} 
+            onClick={() => handlePageNavigation(currentPage - 1)}
+            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-20 disabled:hover:bg-slate-800 rounded-lg text-xs font-bold text-slate-300 transition-all select-none"
+          >
+            Previous
+          </button>
+          <span className="text-[11px] text-slate-400 font-mono px-2">
+            Page {currentPage + 1} of {Math.ceil(totalCount / itemsPerPage)}
+          </span>
+          <button 
+            disabled={(currentPage + 1) * itemsPerPage >= totalCount || loading} 
+            onClick={() => handlePageNavigation(currentPage + 1)}
+            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-20 disabled:hover:bg-slate-800 rounded-lg text-xs font-bold text-slate-300 transition-all select-none"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }
