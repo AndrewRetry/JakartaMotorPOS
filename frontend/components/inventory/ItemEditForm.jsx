@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 /**
  * ItemEditForm
@@ -7,7 +7,41 @@ import React from 'react';
  * Used by both ItemEditScreen (edit mode) and ItemCreateScreen (create mode)
  */
 export default function ItemEditForm({ formState, onChange, onSave, onCancel, isSaving, isCreateMode = false }) {
-  
+
+  // ==== Kategori data (was hardcoded, now pulled from /api/kategori) ====
+  const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch('/api/kategori');
+        const data = await res.json();
+        if (!isMounted) return;
+
+        // Only show active categories in the dropdown
+        const activeOnly = (data.data || []).filter(
+          (cat) => String(cat.isActive).toUpperCase() === 'TRUE'
+        );
+        setCategories(activeOnly);
+      } catch (err) {
+        console.error('Failed to fetch categories:', err);
+        if (isMounted) setCategories([]);
+      } finally {
+        if (isMounted) setCategoriesLoading(false);
+      }
+    };
+
+    fetchCategories();
+    return () => { isMounted = false; };
+  }, []);
+
+  // categoryId stores the kategori's id (matches backend contract in routes/barang.py),
+  // so value=id and label=nama.
+  const categoryOptions = categories.map((cat) => ({ value: cat.id, label: cat.nama }));
+
   const sections = [
     {
       title: 'Informasi Dasar',
@@ -25,8 +59,10 @@ export default function ItemEditForm({ formState, onChange, onSave, onCancel, is
           name: 'categoryId', 
           type: 'select', 
           colSpan: 'col-span-1',
-          options: ['', 'Elektronik', 'Mekanik', 'Aksesoris', 'Spare Part'],
-          placeholder: '-- Pilih Kategori --'
+          options: categoryOptions,
+          placeholder: categoriesLoading
+            ? 'Memuat kategori...'
+            : (categoryOptions.length === 0 ? 'Belum ada kategori' : '-- Pilih Kategori --')
         },
         { 
           label: 'Mitra/Supplier', 
@@ -40,8 +76,8 @@ export default function ItemEditForm({ formState, onChange, onSave, onCancel, is
           name: 'tipe', 
           type: 'select', 
           colSpan: 'col-span-1',
-          options: ['Barang (GOODS)', 'Spare Part', 'Jasa'],
-          placeholder: 'Pilih tipe'
+          options: ['Barang (GOODS)', 'Jasa (SERVICE)'],
+          placeholder: '-- Pilih Tipe --'
         },
       ]
     },
@@ -159,14 +195,21 @@ export default function ItemEditForm({ formState, onChange, onSave, onCancel, is
                   <select
                     value={formState[field.name] || ''}
                     onChange={(e) => onChange(field.name, e.target.value)}
-                    className="w-full bg-[#0f131c] border border-[#2b384e] rounded px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-blue-500 cursor-pointer"
+                    disabled={field.name === 'categoryId' && categoriesLoading}
+                    className="w-full bg-[#0f131c] border border-[#2b384e] rounded px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-blue-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="">{field.placeholder || '-- Pilih --'}</option>
-                    {field.options.map((opt, i) => (
-                      <option key={i} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
+                    {field.options.map((opt, i) => {
+                      // Supports both plain string options (e.g. Tipe Item)
+                      // and {value, label} objects (e.g. Kategori from API)
+                      const optValue = typeof opt === 'object' ? opt.value : opt;
+                      const optLabel = typeof opt === 'object' ? opt.label : opt;
+                      return (
+                        <option key={optValue || i} value={optValue}>
+                          {optLabel}
+                        </option>
+                      );
+                    })}
                   </select>
                 ) : (
                   <input
