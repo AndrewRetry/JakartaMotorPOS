@@ -66,95 +66,147 @@ def get_item_by_id(item_id):
     except Exception as err:
         return jsonify({"status": "error", "message": str(err)}), 500
 
+@barang_bp.route('/api/barang/create', methods=['POST'])
+def create_item():
+    """
+    Create a new barang (inventory item) with auto-generated ID and version=0.
+    
+    Expected JSON payload:
+    {
+        "kode": "CODE-123",
+        "nama": "Item Name",
+        "categoryId": "1",
+        "mitra": "Mitra Name",
+        "tipe": "Barang",
+        "stok": "100",
+        "modal": "50000",
+        "p1": "75000",
+        "p2": "80000",
+        "p3": "85000",
+        "p4": "90000",
+        "lokasiItem": "Rak A-1",
+        "lokasiStock": "Box 12",
+        "notes": "Optional notes"
+    }
+    
+    Returns:
+    - 201: Successfully created with new item ID and version 0
+    - 400: Missing required fields or malformed payload
+    - 500: Server error during write
+    """
+    try:
+        payload = request.get_json()
+        
+        # ==== INPUT VALIDATION ====
+        if not payload:
+            return jsonify({
+                "status": "error",
+                "message": "Request body must be valid JSON"
+            }), 400
+        
+        # Define required fields for item creation
+        required_fields = ["kode", "nama"]
+        missing_fields = [f for f in required_fields if not payload.get(f)]
+        
+        if missing_fields:
+            return jsonify({
+                "status": "error",
+                "message": f"Missing required fields: {', '.join(missing_fields)}"
+            }), 400
+        
+        # ==== GENERATE NEW ID ====
+        # Read existing records to find max ID for sequential assignment
+        existing_records = db.get_all() or []
+        max_id = 0
+        
+        for record in existing_records:
+            try:
+                record_id = int(record.get("id", "0"))
+                if record_id > max_id:
+                    max_id = record_id
+            except (ValueError, TypeError):
+                pass
+        
+        new_id = str(max_id + 1)
+        
+        # ==== BUILD NEW ITEM RECORD ====
+        new_item = {
+            "id": new_id,
+            "kode": str(payload.get("kode", "")).strip(),
+            "nama": str(payload.get("nama", "")).strip(),
+            "categoryId": str(payload.get("categoryId", "")).strip(),
+            "mitra": str(payload.get("mitra", "")).strip(),
+            "tipe": str(payload.get("tipe", "")).strip(),
+            "stok": str(payload.get("stok", "0")).strip(),
+            "modal": str(payload.get("modal", "0")).strip(),
+            "p1": str(payload.get("p1", "0")).strip(),
+            "p2": str(payload.get("p2", "0")).strip(),
+            "p3": str(payload.get("p3", "0")).strip(),
+            "p4": str(payload.get("p4", "0")).strip(),
+            "lokasiItem": str(payload.get("lokasiItem", "")).strip(),
+            "lokasiStock": str(payload.get("lokasiStock", "")).strip(),
+            "notes": str(payload.get("notes", "")).strip(),
+            "version": "0"  # All new items start at version 0
+        }
+        
+        # ==== WRITE TO CSV (THREAD-SAFE) ====
+        result, status_code = db.create_row(new_item)
+        
+        if status_code == 201:
+            return jsonify({
+                "status": "success",
+                "message": "Item berhasil dibuat",
+                "id": new_id,
+                "version": "0",
+                "item": new_item
+            }), 201
+        else:
+            return jsonify(result), status_code
+            
+    except Exception as err:
+        return jsonify({
+            "status": "error",
+            "message": f"Unexpected error: {str(err)}"
+        }), 500
+
 @barang_bp.route('/api/barang/update', methods=['POST'])
 def update_item():
     """
-    Update item without OCC (Optimistic Concurrency Control).
-    Simply overwrites the row - no version checking.
+    Update item with OCC (Optimistic Concurrency Control).
+    Requires matching version number for conflict detection.
     """
-    body = request.json or {}
-    target_id = body.get('id')
-    
-    if not target_id:
-        return jsonify({"status": "error", "message": "Missing 'id'"}), 400
- 
-    # Capture all form fields
-    updated_fields = {
-        "kode": body.get('kode'),
-        "nama": body.get('nama'),
-        "categoryId": body.get('categoryId'),
-        "mitra": body.get('mitra'),
-        "tipe": body.get('tipe'),
-        "stok": body.get('stok'),
-        "modal": body.get('modal'),
-        "p1": body.get('p1'),
-        "p2": body.get('p2'),
-        "p3": body.get('p3'),
-        "p4": body.get('p4'),
-        "lokasiItem": body.get('lokasiItem'),
-        "lokasiStock": body.get('lokasiStock'),
-        "notes": body.get('notes')
-    }
-    
     try:
-        res, status_code = db.update_row_simple(target_id, updated_fields)
-        return jsonify(res), status_code
+        payload = request.get_json()
+        
+        if not payload:
+            return jsonify({"status": "error", "message": "Request body must be valid JSON"}), 400
+        
+        item_id = payload.get("id")
+        version = payload.get("version")
+        
+        if not item_id or version is None:
+            return jsonify({"status": "error", "message": "Missing 'id' or 'version'"}), 400
+        
+        # Extract fields to update (exclude id and version)
+        update_fields = {k: v for k, v in payload.items() if k not in ("id", "version")}
+        
+        if not update_fields:
+            return jsonify({"status": "error", "message": "No fields to update"}), 400
+        
+        result, status_code = db.update_row(str(item_id), str(version), update_fields)
+        return jsonify(result), status_code
+        
     except Exception as err:
         return jsonify({"status": "error", "message": str(err)}), 500
-    """Update item without version checking (no OCC)."""
-    body = request.json or {}
-    target_id = body.get('id')
-    
-    if not target_id:
-        return jsonify({"status": "error", "message": "Missing 'id'"}), 400
 
-    updated_fields = {
-        "kode": body.get('kode'),
-        "nama": body.get('nama'),
-        "categoryId": body.get('categoryId'),
-        "mitra": body.get('mitra'),
-        "tipe": body.get('tipe'),
-        "stok": body.get('stok'),
-        "modal": body.get('modal'),
-        "p1": body.get('p1'),
-        "p2": body.get('p2'),
-        "p3": body.get('p3'),
-        "p4": body.get('p4'),
-        "lokasiItem": body.get('lokasiItem'),
-        "lokasiStock": body.get('lokasiStock'),
-        "notes": body.get('notes')
-    }
-    
+@barang_bp.route('/api/barang/<item_id>', methods=['DELETE'])
+def delete_item(item_id):
+    """
+    Delete an item by ID (hard-delete from CSV).
+    Returns 200 on success, 404 if not found.
+    """
     try:
-        res = db.update_row_simple(target_id, updated_fields)
-        return jsonify(res), 200
+        result, status_code = db.delete_row(item_id)
+        return jsonify(result), status_code
     except Exception as err:
         return jsonify({"status": "error", "message": str(err)}), 500
-    """Processes real-time form edits safely using version checking."""
-    body = request.json or {}
-    target_id = body.get('id')
-    client_version = body.get('version')
-    
-    if not target_id or client_version is None:
-        return jsonify({"status": "error", "message": "Missing 'id' or 'version'"}), 400
-
-    # Capture and clean every UI form field
-    updated_fields = {
-        "kode": body.get('kode'),
-        "nama": body.get('nama'),
-        "categoryId": body.get('categoryId'),
-        "mitra": body.get('mitra'),
-        "tipe": body.get('tipe'),
-        "stok": body.get('stok'),
-        "modal": body.get('modal'),
-        "p1": body.get('p1'),
-        "p2": body.get('p2'),
-        "p3": body.get('p3'),
-        "p4": body.get('p4'),
-        "lokasiItem": body.get('lokasiItem'),
-        "lokasiStock": body.get('lokasiStock'),
-        "notes": body.get('notes')
-    }
-    
-    res, status_code = db.update_row(target_id, client_version, updated_fields)
-    return jsonify(res), status_code
