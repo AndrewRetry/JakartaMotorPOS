@@ -3,6 +3,9 @@ import time
 # Ultra-lightweight lookups for global table syncs
 MUTATION_STATES = {
     "barang": time.time(),
+    "kategori": time.time(),
+    "supplier": time.time(),
+    "customer": time.time()
     # add more
 }
 
