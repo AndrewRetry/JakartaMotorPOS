@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import ItemEditForm from '../components/inventory/ItemEditForm';
-import EditHeader from '../components/inventory/EditHeader';
+import { Icons } from '../components/common/Icons';
 
 /**
- * ItemCreateScreen
+ * ItemCreateScreen (FIXED)
  * Full-page create view for a new barang item
  * URL: /barang/create
  * Auto-generates or allows manual kode with format BRG-YYYYMMDD-XXX
+ * 
+ * FIX: Don't use EditHeader for create mode, use a custom header instead
  */
 export default function ItemCreateScreen({ onBack }) {
   const [formState, setFormState] = useState({
@@ -119,25 +121,54 @@ export default function ItemCreateScreen({ onBack }) {
 
   return (
     <div className="min-h-screen bg-[#0f131c]">
-      {/* Header */}
-      <EditHeader title="Tambah Barang Baru" subtitle="Isi form untuk menambahkan barang baru" onBack={onBack} />
+      {/* Custom Header for Create Mode (don't use EditHeader) */}
+      <div className="bg-gradient-to-r from-[#141923] to-[#0f131c] border-b border-[#1f293d]">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            {/* Left: Back button + Title */}
+            <div className="flex items-center gap-4">
+              <button
+                onClick={onBack}
+                className="p-2 hover:bg-[#1c2331] rounded-lg transition-all text-slate-400 hover:text-slate-200"
+                title="Kembali"
+              >
+                ← Kembali
+              </button>
+              
+              <div className="h-8 w-px bg-[#1f293d]"></div>
+
+              <div>
+                <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-3">
+                  <div className="p-2.5 bg-green-600/10 text-green-500 rounded-lg">
+                    <Icons.Master />
+                  </div>
+                  Tambah Barang Baru
+                </h1>
+                <p className="text-sm text-slate-400 mt-1">
+                  Isi form untuk menambahkan barang baru ke sistem
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="mx-auto max-w-5xl mt-6 px-8 py-4 bg-red-600/20 border border-red-600/50 rounded-lg text-red-300 text-sm font-semibold">
+          ⚠️ {error}
+        </div>
+      )}
 
       {/* Success Alert */}
       {successMessage && (
-        <div className="mx-auto max-w-4xl mt-6 px-6 py-4 bg-emerald-600/20 border border-emerald-600/50 rounded-lg text-emerald-300 text-sm font-semibold">
+        <div className="mx-auto max-w-5xl mt-6 px-8 py-4 bg-emerald-600/20 border border-emerald-600/50 rounded-lg text-emerald-300 text-sm font-semibold">
           ✓ {successMessage}
         </div>
       )}
 
-      {/* Error Alert */}
-      {error && (
-        <div className="mx-auto max-w-4xl mt-6 px-6 py-4 bg-red-600/20 border border-red-600/50 rounded-lg text-red-300 text-sm font-semibold">
-          ✕ {error}
-        </div>
-      )}
-
       {/* Form Container */}
-      <div className="mx-auto max-w-4xl px-6 py-8">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-8">
         
         {/* Kode Barang Section */}
         <section className="bg-[#141923] border border-[#1f293d] rounded-xl p-6 mb-8">
@@ -179,73 +210,48 @@ export default function ItemCreateScreen({ onBack }) {
             {/* Kode Input or Display */}
             <div>
               {kodeMode === 'auto' ? (
-                <>
-                  <label className="block text-sm font-semibold text-slate-200 mb-2">
-                    Kode (Otomatis)
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={formState.kode}
-                      disabled
-                      placeholder="Akan di-generate saat disimpan"
-                      className="flex-1 bg-slate-800 border border-[#2b384e] rounded px-3 py-2 text-slate-400 text-sm cursor-not-allowed"
-                    />
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <label className="block text-xs font-semibold text-slate-400 mb-2">KODE (Auto-Generated)</label>
+                    <div className="px-3 py-2 bg-[#0f131c] border border-[#2b384e] rounded text-slate-300 text-sm font-mono">
+                      {formState.kode || '(akan di-generate)'}
+                    </div>
+                  </div>
+                  <div className="flex items-end">
                     <button
                       type="button"
                       onClick={handleAutoGenerateKode}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded text-sm transition-all"
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded transition-all text-sm"
                     >
                       Generate
                     </button>
                   </div>
-                  <p className="text-xs text-slate-400 mt-2">Format: BRG-YYYYMMDD-XXX</p>
-                </>
+                </div>
               ) : (
-                <>
-                  <label className="block text-sm font-semibold text-slate-200 mb-2">
-                    Kode <span className="text-red-400">*</span>
-                  </label>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-2">KODE (Manual)</label>
                   <input
                     type="text"
                     value={formState.kode}
                     onChange={(e) => handleFieldChange('kode', e.target.value)}
-                    placeholder="Masukkan kode unik barang"
-                    className="w-full bg-[#0f131c] border border-[#2b384e] rounded px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-blue-500"
+                    placeholder="Contoh: BR-001-OLI"
+                    className="w-full px-3 py-2 bg-[#0f131c] border border-[#2b384e] rounded text-slate-100 text-sm focus:outline-none focus:border-blue-500"
                   />
-                </>
+                </div>
               )}
             </div>
           </div>
         </section>
 
-        {/* Form Fields */}
-        <ItemEditForm 
-          formState={formState} 
+        {/* Item Form */}
+        <ItemEditForm
+          formState={formState}
           onChange={handleFieldChange}
           onSave={handleCreate}
           onCancel={onBack}
           isSaving={isLoading}
           isCreateMode={true}
         />
-
-        {/* Action Buttons */}
-        <div className="flex gap-3 justify-end mt-8">
-          <button
-            onClick={onBack}
-            disabled={isLoading}
-            className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded transition-all disabled:opacity-50"
-          >
-            Batal
-          </button>
-          <button
-            onClick={handleCreate}
-            disabled={isLoading}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded transition-all disabled:opacity-50 flex items-center gap-2"
-          >
-            {isLoading ? '⏳ Menyimpan...' : '✓ Simpan'}
-          </button>
-        </div>
       </div>
     </div>
   );
