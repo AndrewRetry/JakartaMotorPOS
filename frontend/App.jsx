@@ -5,17 +5,18 @@ import DataMasterHubScreen from './screens/DataMasterHub';
 import DaftarBarangScreen from './screens/DaftarBarangScreen';
 import ItemEditScreen from './screens/ItemEditScreen';
 import ItemCreateScreen from './screens/ItemCreateScreen';
+import CategoriesScreen from './screens/CategoriesScreen';
+import SupplierScreen from './screens/SupplierScreen';
+import CustomersScreen from './screens/CustomersScreen';
 import StubScreen from './screens/StubScreen';
 
 export default function App() {
   const [currentMenu, setCurrentMenu] = useState('Data Master');
-  const [viewState, setViewState] = useState('hub'); // 'hub', 'barang', 'create', 'edit', or menu name
+  const [viewState, setViewState] = useState('hub'); // 'hub', 'barang', 'kategori', 'supplier', 'pelanggan', 'create', 'edit', or menu name
   const [editingItemId, setEditingItemId] = useState(null); // For /barang/edit?id=N
 
   /**
    * 🧭 URL Routing Synchronization
-   * Syncs browser URL path with application state and vice versa.
-   * Enables direct bookmarking (e.g., /barang) and browser back/forward navigation.
    */
   useEffect(() => {
     const handlePopState = () => {
@@ -26,23 +27,16 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  /**
-   * Parse URL pathname and update app state accordingly
-   */
   const syncAppStateFromURL = () => {
     const path = window.location.pathname;
-    
-    // Extract the route segment (e.g., /barang, /stok, /)
     const segments = path.split('/').filter(Boolean);
     const route = segments[0] || 'home';
-    const subroute = segments[1]; // e.g., 'edit' or 'create' from /barang/edit or /barang/create
+    const subroute = segments[1];
 
-    // Check for /barang/create
     if (route === 'barang' && subroute === 'create') {
       setCurrentMenu('Data Master');
       setViewState('create');
     }
-    // Check for /barang/edit?id=N
     else if (route === 'barang' && subroute === 'edit') {
       const params = new URLSearchParams(window.location.search);
       const id = params.get('id');
@@ -53,6 +47,18 @@ export default function App() {
     else if (route === 'barang') {
       setCurrentMenu('Data Master');
       setViewState('barang');
+    } 
+    else if (route === 'categories') {
+      setCurrentMenu('Data Master');
+      setViewState('kategori');
+    } 
+    else if (route === 'suppliers') {
+      setCurrentMenu('Data Master');
+      setViewState('supplier');
+    } 
+    else if (route === 'customers') {
+      setCurrentMenu('Data Master');
+      setViewState('pelanggan');
     } 
     else if (route === 'stok') {
       setCurrentMenu('Stok');
@@ -84,14 +90,20 @@ export default function App() {
     }
   };
 
-  /**
-   * Update URL when internal navigation occurs
-   */
   const navigateTo = (menuItem, subView) => {
     let newPath = '/';
 
     if (subView === 'barang') {
       newPath = '/barang';
+    } 
+    else if (subView === 'kategori') {
+      newPath = '/categories';
+    } 
+    else if (subView === 'supplier') {
+      newPath = '/suppliers';
+    } 
+    else if (subView === 'pelanggan') {
+      newPath = '/customers';
     } 
     else if (subView === 'hub') {
       newPath = '/';
@@ -123,9 +135,6 @@ export default function App() {
     setViewState(subView);
   };
 
-  /**
-   * Navigate to item create screen
-   */
   const navigateToCreate = () => {
     const newPath = '/barang/create';
     window.history.pushState(null, '', newPath);
@@ -133,16 +142,8 @@ export default function App() {
     setViewState('create');
   };
 
-  /**
-   * Navigate back from create screen
-   */
-  const handleBackFromCreate = () => {
-    navigateTo('Data Master', 'barang');
-  };
+  const handleBackFromCreate = () => navigateTo('Data Master', 'barang');
 
-  /**
-   * Navigate to item edit screen
-   */
   const navigateToEdit = (itemId) => {
     const newPath = `/barang/edit?id=${itemId}`;
     window.history.pushState(null, '', newPath);
@@ -151,16 +152,8 @@ export default function App() {
     setEditingItemId(itemId);
   };
 
-  /**
-   * Navigate back from edit screen
-   */
-  const handleBackFromEdit = () => {
-    navigateTo('Data Master', 'barang');
-  };
+  const handleBackFromEdit = () => navigateTo('Data Master', 'barang');
 
-  /**
-   * Sidebar menu click handler
-   */
   const handleMenuTransition = (menuItem) => {
     if (menuItem === 'Data Master') {
       navigateTo(menuItem, 'hub');
@@ -169,35 +162,42 @@ export default function App() {
     }
   };
 
-  /**
-   * Sub-view navigation handler (e.g., Data Master Hub -> Daftar Barang)
-   */
   const handleSelectSubView = (subView) => {
     if (subView === 'daftar-barang') {
       navigateTo('Data Master', 'barang');
-    } else {
+    } 
+    else if (subView === 'kategori') {
+      navigateTo('Data Master', 'kategori');
+    } 
+    else if (subView === 'supplier') {
+      navigateTo('Data Master', 'supplier');
+    } 
+    else if (subView === 'pelanggan') {
+      navigateTo('Data Master', 'pelanggan');
+    } 
+    else {
       navigateTo(currentMenu, subView);
     }
   };
 
-  /**
-   * Back button handler (returns to hub)
-   */
-  const handleBack = () => {
-    navigateTo('Data Master', 'hub');
-  };
+  const handleBack = () => navigateTo('Data Master', 'hub');
 
-  // Initialize route from current URL on mount
   useEffect(() => {
     syncAppStateFromURL();
   }, []);
+
+  // Sub-screens that override the top header's title to match their breadcrumb
+  const headerTitle = 
+    viewState === 'kategori' ? 'Categories' :
+    viewState === 'pelanggan' ? 'Customers' :
+    currentMenu;
 
   return (
     <div className="flex h-screen bg-[#0f131c] text-slate-100 font-sans overflow-hidden antialiased">
       <Sidebar activeMenu={currentMenu} onMenuChange={handleMenuTransition} />
       
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header title={currentMenu} />
+        <Header title={headerTitle} />
         
         <main className="flex-1 overflow-y-auto p-8 bg-[#0f131c]">
           {/* Data Master Hub */}
@@ -205,19 +205,14 @@ export default function App() {
             <DataMasterHubScreen onSelectSubView={handleSelectSubView} />
           )}
           
-          {/* Create Item Screen - NEW */}
+          {/* Create Item Screen */}
           {viewState === 'create' && (
-            <ItemCreateScreen 
-              onBack={handleBackFromCreate}
-            />
+            <ItemCreateScreen onBack={handleBackFromCreate} />
           )}
           
           {/* Edit Item Screen */}
           {viewState === 'edit' && editingItemId && (
-            <ItemEditScreen 
-              itemId={editingItemId} 
-              onBack={handleBackFromEdit}
-            />
+            <ItemEditScreen itemId={editingItemId} onBack={handleBackFromEdit} />
           )}
           
           {/* Daftar Barang (Inventory List) */}
@@ -229,9 +224,25 @@ export default function App() {
             />
           )}
 
+          {/* Kategori (Category List) */}
+          {viewState === 'kategori' && (
+            <CategoriesScreen />
+          )}
+
+          {/* Supplier */}
+          {viewState === 'supplier' && (
+            <SupplierScreen />
+          )}
+
+          {/* Pelanggan (Customer List) - NEW */}
+          {viewState === 'pelanggan' && (
+            <CustomersScreen />
+          )}
+
           {/* Stub screens for other modules (Stok, Penjualan, etc.) */}
           {viewState !== 'hub' && viewState !== 'barang' && viewState !== 'daftar-barang' && 
-           viewState !== 'edit' && viewState !== 'create' && viewState !== 'beranda' && (
+           viewState !== 'edit' && viewState !== 'create' && viewState !== 'beranda' && 
+           viewState !== 'kategori' && viewState !== 'supplier' && viewState !== 'pelanggan' && (
             <StubScreen targetFeature={currentMenu} />
           )}
 
