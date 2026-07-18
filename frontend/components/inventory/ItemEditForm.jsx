@@ -2,39 +2,126 @@ import React from 'react';
 
 /**
  * ItemEditForm
- * Reusable form component for editing barang items
+ * Reusable form component for editing and creating barang items
  * Responsive grid layout that adapts to mobile/tablet/desktop
+ * Used by both ItemEditScreen (edit mode) and ItemCreateScreen (create mode)
  */
-export default function ItemEditForm({ formState, onChange, onSave, onCancel, isSaving }) {
+export default function ItemEditForm({ formState, onChange, onSave, onCancel, isSaving, isCreateMode = false }) {
   
   const sections = [
     {
       title: 'Informasi Dasar',
       fields: [
-        { label: 'Kode Item', name: 'kode', type: 'text', required: true, colSpan: 'col-span-1' },
-        { label: 'Nama Item', name: 'nama', type: 'text', required: true, colSpan: 'col-span-2' },
-        { label: 'Kategori', name: 'categoryId', type: 'select', colSpan: 'col-span-1', options: ['', 'Elektronik', 'Mekanik', 'Aksesoris'] },
-        { label: 'Mitra/Supplier', name: 'mitra', type: 'text', colSpan: 'col-span-1' },
-        { label: 'Tipe Item', name: 'tipe', type: 'select', colSpan: 'col-span-1', options: ['', 'Barang', 'Spare Part'] },
+        { 
+          label: 'Nama Item', 
+          name: 'nama', 
+          type: 'text', 
+          required: true, 
+          colSpan: 'col-span-1 md:col-span-2',
+          placeholder: 'Contoh: Oli Mesin 1L'
+        },
+        { 
+          label: 'Kategori', 
+          name: 'categoryId', 
+          type: 'select', 
+          colSpan: 'col-span-1',
+          options: ['', 'Elektronik', 'Mekanik', 'Aksesoris', 'Spare Part'],
+          placeholder: '-- Pilih Kategori --'
+        },
+        { 
+          label: 'Mitra/Supplier', 
+          name: 'mitra', 
+          type: 'text', 
+          colSpan: 'col-span-1',
+          placeholder: 'Contoh: PT ABC'
+        },
+        { 
+          label: 'Tipe Item', 
+          name: 'tipe', 
+          type: 'select', 
+          colSpan: 'col-span-1',
+          options: ['Barang (GOODS)', 'Spare Part', 'Jasa'],
+          placeholder: 'Pilih tipe'
+        },
       ]
     },
     {
       title: 'Stok & Harga',
       fields: [
-        { label: 'Stok (Qty)', name: 'stok', type: 'number', colSpan: 'col-span-1', min: 0 },
-        { label: 'Modal (Harga Beli)', name: 'modal', type: 'number', colSpan: 'col-span-1', min: 0 },
-        { label: 'Harga P1', name: 'p1', type: 'number', colSpan: 'col-span-1', min: 0 },
-        { label: 'Harga P2', name: 'p2', type: 'number', colSpan: 'col-span-1', min: 0 },
-        { label: 'Harga P3', name: 'p3', type: 'number', colSpan: 'col-span-1', min: 0 },
-        { label: 'Harga P4', name: 'p4', type: 'number', colSpan: 'col-span-1', min: 0 },
+        { 
+          label: 'Stok Awal (Qty)', 
+          name: 'stok', 
+          type: 'number', 
+          colSpan: 'col-span-1',
+          min: 0,
+          placeholder: '0'
+        },
+        { 
+          label: 'Harga Modal (Beli)', 
+          name: 'modal', 
+          type: 'number', 
+          colSpan: 'col-span-1',
+          min: 0,
+          placeholder: '0'
+        },
+        { 
+          label: 'Harga P1 (Jual Normal)', 
+          name: 'p1', 
+          type: 'number', 
+          colSpan: 'col-span-1',
+          min: 0,
+          placeholder: '0'
+        },
+        { 
+          label: 'Harga P2 (Diskon 1)', 
+          name: 'p2', 
+          type: 'number', 
+          colSpan: 'col-span-1',
+          min: 0,
+          placeholder: '0'
+        },
+        { 
+          label: 'Harga P3 (Diskon 2)', 
+          name: 'p3', 
+          type: 'number', 
+          colSpan: 'col-span-1',
+          min: 0,
+          placeholder: '0'
+        },
+        { 
+          label: 'Harga P4 (Grosir)', 
+          name: 'p4', 
+          type: 'number', 
+          colSpan: 'col-span-1',
+          min: 0,
+          placeholder: '0'
+        },
       ]
     },
     {
       title: 'Lokasi & Catatan',
       fields: [
-        { label: 'Lokasi Item (Display)', name: 'lokasiItem', type: 'text', colSpan: 'col-span-1', placeholder: 'Contoh: Rak A-1' },
-        { label: 'Lokasi Stock (Gudang)', name: 'lokasiStock', type: 'text', colSpan: 'col-span-1', placeholder: 'Contoh: Box 12' },
-        { label: 'Catatan', name: 'notes', type: 'textarea', colSpan: 'col-span-2', placeholder: 'Keterangan tambahan tentang item ini...' },
+        { 
+          label: 'Lokasi Display', 
+          name: 'lokasiItem', 
+          type: 'text', 
+          colSpan: 'col-span-1',
+          placeholder: 'Contoh: Rak A-1'
+        },
+        { 
+          label: 'Lokasi Gudang', 
+          name: 'lokasiStock', 
+          type: 'text', 
+          colSpan: 'col-span-1',
+          placeholder: 'Contoh: Box 12'
+        },
+        { 
+          label: 'Catatan', 
+          name: 'notes', 
+          type: 'textarea', 
+          colSpan: 'col-span-1 md:col-span-2',
+          placeholder: 'Keterangan tambahan tentang item ini (opsional)...'
+        },
       ]
     }
   ];
@@ -65,18 +152,19 @@ export default function ItemEditForm({ formState, onChange, onSave, onCancel, is
                     value={formState[field.name] || ''}
                     onChange={(e) => onChange(field.name, e.target.value)}
                     placeholder={field.placeholder}
-                    className="w-full px-4 py-2.5 bg-[#0f131c] border border-[#2b384e] rounded-lg text-slate-100 text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all resize-none"
-                    rows="4"
+                    rows="3"
+                    className="w-full bg-[#0f131c] border border-[#2b384e] rounded px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-blue-500 resize-none"
                   />
                 ) : field.type === 'select' ? (
                   <select
                     value={formState[field.name] || ''}
                     onChange={(e) => onChange(field.name, e.target.value)}
-                    className="w-full px-4 py-2.5 bg-[#0f131c] border border-[#2b384e] rounded-lg text-slate-100 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all appearance-none"
+                    className="w-full bg-[#0f131c] border border-[#2b384e] rounded px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-blue-500 cursor-pointer"
                   >
-                    {field.options.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt || '-- Pilih --'}
+                    <option value="">{field.placeholder || '-- Pilih --'}</option>
+                    {field.options.map((opt, i) => (
+                      <option key={i} value={opt}>
+                        {opt}
                       </option>
                     ))}
                   </select>
@@ -87,7 +175,7 @@ export default function ItemEditForm({ formState, onChange, onSave, onCancel, is
                     onChange={(e) => onChange(field.name, e.target.value)}
                     placeholder={field.placeholder}
                     min={field.min}
-                    className="w-full px-4 py-2.5 bg-[#0f131c] border border-[#2b384e] rounded-lg text-slate-100 text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all"
+                    className="w-full bg-[#0f131c] border border-[#2b384e] rounded px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-blue-500"
                   />
                 )}
               </div>
@@ -96,13 +184,13 @@ export default function ItemEditForm({ formState, onChange, onSave, onCancel, is
         </section>
       ))}
 
-      {/* Action Buttons */}
-      <div className="flex gap-3 justify-end pt-6 border-t border-[#1f293d]">
+      {/* Action Buttons - Only shown in create/edit modes */}
+      <div className="flex gap-3 justify-end">
         <button
           type="button"
           onClick={onCancel}
           disabled={isSaving}
-          className="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:pointer-events-none text-slate-200 font-semibold rounded-lg transition-all text-sm"
+          className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded transition-all disabled:opacity-50"
         >
           Batal
         </button>
@@ -110,16 +198,15 @@ export default function ItemEditForm({ formState, onChange, onSave, onCancel, is
           type="button"
           onClick={onSave}
           disabled={isSaving}
-          className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:pointer-events-none text-white font-semibold rounded-lg transition-all text-sm flex items-center gap-2"
+          className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded transition-all disabled:opacity-50 flex items-center gap-2"
         >
           {isSaving ? (
             <>
-              <span className="inline-block animate-spin">⟳</span>
-              Menyimpan...
+              <span>⏳</span> {isCreateMode ? 'Membuat...' : 'Menyimpan...'}
             </>
           ) : (
             <>
-              ✓ Simpan Perubahan
+              <span>✓</span> {isCreateMode ? 'Buat Item' : 'Simpan'}
             </>
           )}
         </button>

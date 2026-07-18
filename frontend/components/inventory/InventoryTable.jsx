@@ -9,7 +9,7 @@ import InventoryRowReadOnly from './InventoryRowReadOnly';
 export default function InventoryTable({ 
   items, 
   loading,
-  onEditFullPage  // ← Callback to navigate to edit screen with item id
+  onEditItem
 }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-[#1f293d]">
@@ -45,7 +45,7 @@ export default function InventoryTable({
               <InventoryRowReadOnly
                 key={item.id}
                 item={item}
-                onEditFullPage={onEditFullPage}
+                onEditItem={onEditItem}
               />
             ))
           )}
