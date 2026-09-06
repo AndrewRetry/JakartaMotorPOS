@@ -31,12 +31,17 @@ def _normalize_barang_payload(payload: dict) -> dict:
         db_key = key_mapping.get(key, key)
         normalized[db_key] = value
 
-    # Cast integer fields safely if present
-    int_fields = ["stok", "modal", "p1", "p2", "p3", "p4", "category_id"]
-    for field in int_fields:
+    # Cast integer fields safely if present. category_id is a nullable
+    # foreign key -- a blank value means "no category", not zero -- so it
+    # is left out of _safe_int's zero-default and mapped to None instead.
+    zero_default_fields = ["stok", "modal", "p1", "p2", "p3", "p4"]
+    for field in zero_default_fields:
         if field in normalized and normalized[field] is not None:
             normalized[field] = _safe_int(normalized[field])
 
+    if "category_id" in normalized:
+        raw = normalized["category_id"]
+        normalized["category_id"] = None if str(raw).strip() == "" else _safe_int(raw, default=None)
     return normalized
 
 @barang_bp.route('/api/barang', methods=['GET'])

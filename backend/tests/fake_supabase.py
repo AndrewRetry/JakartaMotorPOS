@@ -1,3 +1,16 @@
+"""An in-memory stand-in for the Supabase client, for tests.
+
+It mimics the *call chain* the engine uses -- table().select().or_().range()
+.execute() and friends -- backed by a list of dicts instead of HTTP. That lets
+the route and engine logic be tested with no network, no credentials, and no
+possibility of touching the real database.
+
+It deliberately does NOT reimplement Postgres. It simulates only the three
+constraint violations the engine maps to HTTP status codes -- required
+(23502), unique (23505), and foreign key (23503) -- so those branches stay
+covered without a real database.
+"""
+
 import itertools
 
 from postgrest.exceptions import APIError
@@ -11,16 +24,23 @@ class TableData:
     """The stored rows for one table, plus the constraints we simulate."""
 
     def __init__(self, rows=(), next_id=1, unique_columns=(), required_columns=(),
-                 defaults=None):
+                 defaults=None, foreign_keys=None):
         self.rows = [dict(row) for row in rows]
         self.unique_columns = tuple(unique_columns)
         self.required_columns = tuple(required_columns)
         # Column defaults, as the DDL declares them. Postgres returns the whole
         # row after an INSERT, so a fake that omits them produces false failures.
         self.defaults = dict(defaults or {})
+        # {column: set(valid_ids)} -- mirrors a `references other_table(id)` constraint
+        self.foreign_keys = dict(foreign_keys or {})
         self._ids = itertools.count(next_id)
 
     def insert(self, values):
+        for column, valid_ids in self.foreign_keys.items():
+            value = values.get(column)
+            if value is not None and value not in valid_ids:
+                _raise_api_error("23503", f'insert or update on table violates foreign key constraint',
+                                 f"Key ({column})=({value}) is not present in the referenced table.")
         for column in self.required_columns:
             if values.get(column) is None:
                 _raise_api_error("23502", f'null value in column "{column}"',
