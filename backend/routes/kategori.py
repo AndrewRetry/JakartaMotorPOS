@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
-from core.database import CSVEngine
+from core.schema import KATEGORI 
+from core.supabase_engine import SupabaseEngine
 from core.sync import get_mutation_time
-from config import KATEGORI_CSV_PATH
 
 kategori_bp = Blueprint('kategori', __name__)
 
@@ -40,7 +40,7 @@ def get_categories():
         "last_mutation_time": get_mutation_time("kategori") 
     }), 200
     
-@kategori_bp.route('api/kategori/<category_id>', methods=['GET'])
+@kategori_bp.route('/api/kategori/<category_id>', methods=['GET'])
 def get_category_by_id(category_id):
     """Fetch a single category by id"""
     category = db.get_record(category_id)
@@ -52,7 +52,7 @@ def get_category_by_id(category_id):
     
     return jsonify(category), 200
 
-@kategori_bp.route('api/kategori/create', methods=['POST'])
+@kategori_bp.route('/api/kategori/create', methods=['POST'])
 def create_category():
     """Create a category"""
     payload = request.get_json(silent=True)
@@ -70,9 +70,9 @@ def create_category():
         existing_records, _ = db.list_records(limit = 1000)
         payload = {**payload, "kode": _next_kode(existing_records)}
         
-        result, status_code = db.create_record(payload)
-        if status_code != 201:
-            return jsonify(result), status_code
+    result, status_code = db.create_record(payload)
+    if status_code != 201:
+        return jsonify(result), status_code
         
     return jsonify({
         "status": "success",
@@ -81,7 +81,7 @@ def create_category():
         "item": result
     }), 201
     
-@kategori_bp.route('api/kategori/update', methods=['POST'])
+@kategori_bp.route('/api/kategori/update', methods=['POST'])
 def update_category():
     """update a category"""
     payload = request.get_json(silent=True)
@@ -108,7 +108,7 @@ def update_category():
         "item": result
     }), 200
     
-@kategori_bp.route('api/kategori/<category_id>', methods=['DELETE'])
+@kategori_bp.route('/api/kategori/<category_id>', methods=['DELETE'])
 def delete_category(category_id):
     """delete a category by id"""
     result, status_code = db.delete_record(category_id)

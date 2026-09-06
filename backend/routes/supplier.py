@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from core.database import SupabaseEngine
+from core.supabase_engine import SupabaseEngine
 from core.schema import SUPPLIER
 from core.sync import get_mutation_time
 
