@@ -1,212 +1,171 @@
 from flask import Blueprint, jsonify, request
-from core.database import CSVEngine
+from core.supabase_engine import SupabaseEngine
+from core.schema import BARANG
 from core.sync import get_mutation_time
-from config import BARANG_CSV_PATH
 
-barang_bp = Blueprint('barang', __name__)
+barang_bp = Blueprint("barang", __name__)
 
-# Instantiate table manager pointing to your self-healing data path
-db = CSVEngine(BARANG_CSV_PATH, identity_col="id")
+
+db = SupabaseEngine(BARANG)
+
+def _safe_int(val, default=0):
+    if val is None or str(val).strip() == "":
+        return default
+    try:
+        return int(val)
+    except (ValueError, TypeError):
+        return default
+
+def _normalize_barang_payload(payload: dict) -> dict:
+    """Normalizes camelCase payload keys to DB snake_case columns."""
+    normalized = {}
+    
+    # Map field aliases
+    key_mapping = {
+        "categoryId": "category_id",
+        "lokasiItem": "lokasi_item",
+        "lokasiStock": "lokasi_stock",
+    }
+    
+    for key, value in payload.items():
+        db_key = key_mapping.get(key, key)
+        normalized[db_key] = value
+
+    # Cast integer fields safely if present. category_id is a nullable
+    # foreign key -- a blank value means "no category", not zero -- so it
+    # is left out of _safe_int's zero-default and mapped to None instead.
+    zero_default_fields = ["stok", "modal", "p1", "p2", "p3", "p4"]
+    for field in zero_default_fields:
+        if field in normalized and normalized[field] is not None:
+            normalized[field] = _safe_int(normalized[field])
+
+    if "category_id" in normalized:
+        raw = normalized["category_id"]
+        normalized["category_id"] = None if str(raw).strip() == "" else _safe_int(raw, default=None)
+    return normalized
 
 @barang_bp.route('/api/barang', methods=['GET'])
 def get_items():
     """
-    Fetches a paginated, server-side filtered chunk of items.
-    Protects frontend DOM memory limits while handling 20k+ records.
+    Fetches a search-filtered list of items (barang), matched against kode,
+    nama, or category.
     """
-    # 1. Parse incoming UI pagination and search query parameters
-    search_query = request.args.get('q', default='').lower().strip()
-    limit = request.args.get('limit', type=int, default=50)
-    offset = request.args.get('offset', type=int, default=0)
-
-    # 2. Extract database records via your engine abstraction
-    all_records = db.get_all() or []
-
-    # 3. High-performance multi-term token filtering engine
-    search_tokens = search_query.split()
-    if search_tokens:
-        filtered_records = []
-        for item in all_records:
-            # Safely stringify values to avoid attribute crash errors
-            kode = str(item.get("kode", "")).lower()
-            nama = str(item.get("nama", "")).lower()
-            kategori = str(item.get("categoryId", item.get("kategori", ""))).lower()
-            
-            # Order-independent verification: every token must match somewhere
-            if all(token in kode or token in nama or token in kategori for token in search_tokens):
-                filtered_records.append(item)
-    else:
-        filtered_records = all_records
-
-    total_matches = len(filtered_records)
+    records, total = db.list_records(
+        search = request.args.get('q', default='', type=str),
+        limit = request.args.get('limit', type=int),
+        offset = request.args.get('offset', type=int, default=0),
+    )    
     
-    # 4. Apply clean array slicing for pagination boundaries
-    paginated_chunk = filtered_records[offset : offset + limit]
-
     return jsonify({
-        "data": paginated_chunk,
-        "total": total_matches,
-        "last_mutation_time": get_mutation_time("barang")
+        "data": records,
+        "total": total,
+        "last_mutation_time": get_mutation_time("barang") 
     }), 200
 
 @barang_bp.route('/api/barang/<item_id>', methods=['GET'])
 def get_item_by_id(item_id):
-    """
-    Fetch a single item by ID for the edit screen.
-    Returns full item details including version for OCC.
-    """
-    try:
-        all_records = db.get_all() or []
-        item = next((record for record in all_records if record.get('id') == item_id), None)
+    """Fetch a single item by id"""
+    item = db.get_record(item_id)
+    if not item:
+        return jsonify({
+            "status": "error",
+            "message": "Item tidak ditemukan",
+        }), 404
         
-        if not item:
-            return jsonify({"status": "error", "message": "Item tidak ditemukan"}), 404
-        
-        return jsonify(item), 200
-    except Exception as err:
-        return jsonify({"status": "error", "message": str(err)}), 500
+    return jsonify(item), 200
 
 @barang_bp.route('/api/barang/create', methods=['POST'])
 def create_item():
-    """
-    Create a new barang (inventory item) with auto-generated ID and version=0.
-    
-    Expected JSON payload:
-    {
-        "kode": "CODE-123",
-        "nama": "Item Name",
-        "categoryId": "1",
-        "mitra": "Mitra Name",
-        "tipe": "Barang",
-        "stok": "100",
-        "modal": "50000",
-        "p1": "75000",
-        "p2": "80000",
-        "p3": "85000",
-        "p4": "90000",
-        "lokasiItem": "Rak A-1",
-        "lokasiStock": "Box 12",
-        "notes": "Optional notes"
-    }
-    
-    Returns:
-    - 201: Successfully created with new item ID and version 0
-    - 400: Missing required fields or malformed payload
-    - 500: Server error during write
-    """
-    try:
-        payload = request.get_json()
-        
-        # ==== INPUT VALIDATION ====
-        if not payload:
-            return jsonify({
-                "status": "error",
-                "message": "Request body must be valid JSON"
-            }), 400
-        
-        # Define required fields for item creation
-        required_fields = ["kode", "nama"]
-        missing_fields = [f for f in required_fields if not payload.get(f)]
-        
-        if missing_fields:
-            return jsonify({
-                "status": "error",
-                "message": f"Missing required fields: {', '.join(missing_fields)}"
-            }), 400
-        
-        # ==== GENERATE NEW ID ====
-        # Read existing records to find max ID for sequential assignment
-        existing_records = db.get_all() or []
-        max_id = 0
-        
-        for record in existing_records:
-            try:
-                record_id = int(record.get("id", "0"))
-                if record_id > max_id:
-                    max_id = record_id
-            except (ValueError, TypeError):
-                pass
-        
-        new_id = str(max_id + 1)
-        
-        # ==== BUILD NEW ITEM RECORD ====
-        new_item = {
-            "id": new_id,
-            "kode": str(payload.get("kode", "")).strip(),
-            "nama": str(payload.get("nama", "")).strip(),
-            "categoryId": str(payload.get("categoryId", "")).strip(),
-            "mitra": str(payload.get("mitra", "")).strip(),
-            "tipe": str(payload.get("tipe", "")).strip(),
-            "stok": str(payload.get("stok", "0")).strip(),
-            "modal": str(payload.get("modal", "0")).strip(),
-            "p1": str(payload.get("p1", "0")).strip(),
-            "p2": str(payload.get("p2", "0")).strip(),
-            "p3": str(payload.get("p3", "0")).strip(),
-            "p4": str(payload.get("p4", "0")).strip(),
-            "lokasiItem": str(payload.get("lokasiItem", "")).strip(),
-            "lokasiStock": str(payload.get("lokasiStock", "")).strip(),
-            "notes": str(payload.get("notes", "")).strip(),
-            "version": "0"  # All new items start at version 0
-        }
-        
-        # ==== WRITE TO CSV (THREAD-SAFE) ====
-        result, status_code = db.create_row(new_item)
-        
-        if status_code == 201:
-            return jsonify({
-                "status": "success",
-                "message": "Item berhasil dibuat",
-                "id": new_id,
-                "version": "0",
-                "item": new_item
-            }), 201
-        else:
-            return jsonify(result), status_code
-            
-    except Exception as err:
+    """Create a new barang (inventory item)"""
+    payload = request.get_json(silent=True)
+    if not payload:
         return jsonify({
-            "status": "error",
-            "message": f"Unexpected error: {str(err)}"
-        }), 500
+            "status": "error", 
+            "message": "Request body must be valid JSON"
+        }), 400
+        
+    kode = str(payload.get("kode", "")).strip()
+    nama = str(payload.get("nama", "")).strip()
+    
+    missing_fields = []
+    if not kode:
+        missing_fields.append("kode")
+    if not nama:
+        missing_fields.append("nama")
+        
+    if missing_fields:
+        return jsonify({
+            "status": "error", 
+            "message": f"Missing required fields: {', '.join(missing_fields)}"
+        }), 400
+
+    normalized_payload = _normalize_barang_payload(payload)
+
+    item_data = {
+        "kode": kode,
+        "nama": nama,
+        "category_id": normalized_payload.get("category_id"),
+        "mitra": normalized_payload.get("mitra"),
+        "tipe": normalized_payload.get("tipe"),
+        "stok": normalized_payload.get("stok", 0),
+        "modal": normalized_payload.get("modal", 0),
+        "p1": normalized_payload.get("p1", 0),
+        "p2": normalized_payload.get("p2", 0),
+        "p3": normalized_payload.get("p3", 0),
+        "p4": normalized_payload.get("p4", 0),
+        "lokasi_item": normalized_payload.get("lokasi_item"),
+        "lokasi_stock": normalized_payload.get("lokasi_stock"),
+        "notes": normalized_payload.get("notes"),
+    }
+
+    result, status_code = db.create_record(item_data)
+    if status_code not in (200, 201):
+        return jsonify(result), status_code
+
+    return jsonify({
+        "status": "success",
+        "message": "Item berhasil dibuat",
+        "id": result.get("id"),
+        "item": result
+    }), 201
 
 @barang_bp.route('/api/barang/update', methods=['POST'])
 def update_item():
-    """
-    Update item with OCC (Optimistic Concurrency Control).
-    Requires matching version number for conflict detection.
-    """
-    try:
-        payload = request.get_json()
-        
-        if not payload:
-            return jsonify({"status": "error", "message": "Request body must be valid JSON"}), 400
-        
-        item_id = payload.get("id")
-        version = payload.get("version")
-        
-        if not item_id or version is None:
-            return jsonify({"status": "error", "message": "Missing 'id' or 'version'"}), 400
-        
-        # Extract fields to update (exclude id and version)
-        update_fields = {k: v for k, v in payload.items() if k not in ("id", "version")}
-        
-        if not update_fields:
-            return jsonify({"status": "error", "message": "No fields to update"}), 400
-        
-        result, status_code = db.update_row(str(item_id), str(version), update_fields)
-        return jsonify(result), status_code
-        
-    except Exception as err:
-        return jsonify({"status": "error", "message": str(err)}), 500
+    """Update a barang item"""
+    payload = request.get_json(silent=True)
+    if not payload:
+        return jsonify({
+            "status": "error", 
+            "message": "Request body must be valid JSON"
+        }), 400
+    
+    item_id = payload.get("id")
+    if not item_id:
+        return jsonify({
+            "status": "error", 
+            "message": "Missing required field: id"
+        }), 400
 
+    update_fields = _normalize_barang_payload(payload)
+
+    result, status_code = db.update_record(item_id, update_fields)
+    if status_code != 200:
+        return jsonify(result), status_code
+    
+    return jsonify({
+        "status": "success",
+        "message": "Item berhasil diupdate",
+        "item": result
+    }), 200        
+    
 @barang_bp.route('/api/barang/<item_id>', methods=['DELETE'])
 def delete_item(item_id):
-    """
-    Delete an item by ID (hard-delete from CSV).
-    Returns 200 on success, 404 if not found.
-    """
-    try:
-        result, status_code = db.delete_row(item_id)
+    """Delete an item by id"""
+    result, status_code = db.delete_record(item_id)
+    if status_code != 200:
         return jsonify(result), status_code
-    except Exception as err:
-        return jsonify({"status": "error", "message": str(err)}), 500
+        
+    return jsonify({
+        "status": "success",
+        "message": f"Item {item_id} berhasil didelete"
+    }), 200

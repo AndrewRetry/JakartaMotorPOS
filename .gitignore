@@ -10,3 +10,11 @@ backend/.venv/
 
 venv/
 .venv/
+
+# Secrets
+.env
+.env.*
+!.env.example
+backend/.env
+
+/data

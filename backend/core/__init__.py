@@ -1,9 +1,2 @@
-from .database import CSVEngine
-from .sync import update_mutation_time, get_mutation_time
-
-# Explicitly define exposed public API for this package block
-__all__ = [
-    "CSVEngine",
-    "update_mutation_time",
-    "get_mutation_time"
-]
+# backend/core/__init__.py
+"""Data-access layer: schema definitions, the Supabase engine, and the sync clock."""
