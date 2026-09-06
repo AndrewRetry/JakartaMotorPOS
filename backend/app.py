@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request
+from config import FLASK_DEBUG
 from routes.barang import barang_bp
 from routes.kategori import kategori_bp
 from routes.supplier import supplier_bp
@@ -33,9 +34,9 @@ app = create_app()
 
 if __name__ == "__main__":
     app.run(
-        host="127.0.0.1", 
-        port=5000, 
-        debug=True, 
-        threaded=True, 
-        use_reloader=False
+        host="127.0.0.1",
+        port=5000,
+        debug=FLASK_DEBUG,
+        threaded=True,
+        use_reloader=False,
     )
