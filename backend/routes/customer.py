@@ -67,7 +67,7 @@ def create_customer():
         "name": name,
         "phone": payload.get("phone"),
         "address": payload.get("address"),
-        "price_tier": _normalize_price_tier(payload.get("price_tier")),
+        "price_tier": _normalize_price_tier(payload.get("priceTier")),
     }
 
     result, status_code = db.create_record(customer_data)
@@ -98,8 +98,8 @@ def update_customer():
             "message": "Missing required field: id"
         }), 400
 
-    if "price_tier" in payload:
-        payload["price_tier"] = _normalize_price_tier(payload["price_tier"])
+    if "priceTier" in payload:
+        payload["price_tier"] = _normalize_price_tier(payload["priceTier"])
 
     result, status_code = db.update_record(customer_id, payload)
     if status_code != 200:

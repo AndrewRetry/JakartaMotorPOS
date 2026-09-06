@@ -1,59 +1,61 @@
-import os
-import csv
+import sys
 import unittest
+from pathlib import Path
+
+backend_root = Path(__file__).parent.parent
+sys.path.insert(0, str(backend_root))
+
+import routes.barang as barang_route
 from app import create_app
-from routes.barang import db  # Grab the engine instance to swap its file path
-import core.sync as sync
+from core.schema import BARANG
+from core.supabase_engine import SupabaseEngine
+from core.sync import MUTATION_STATES
+from tests.fake_supabase import FakeSupabaseClient, TableData
+
+SEED_ITEM = {
+    "id": 1068, "kode": "008321-29", "nama": "BALON HA", "category_id": None,
+    "mitra": "Mitra A", "tipe": "Barang", "stok": 10, "modal": 21800,
+    "p1": 34500, "p2": 24000, "p3": 25000, "p4": 26200,
+    "lokasi_item": "Rak A-1", "lokasi_stock": "Box 12", "notes": "Catatan Awal",
+}
+
+BARANG_DEFAULTS = {"kode": None, "nama": None, "category_id": None, "mitra": None,
+                   "tipe": None, "stok": 0, "modal": 0, "p1": 0, "p2": 0, "p3": 0, "p4": 0,
+                   "lokasi_item": None, "lokasi_stock": None, "notes": None}
+
 
 class POSBackendTestCase(unittest.TestCase):
-    
+    """Covers the general barang list/update flow and the sync-check endpoint.
+
+    Item-by-item OCC (version checking) was intentionally dropped from barang
+    -- see routes/barang.py -- so there is no conflict test here any more.
+    """
+
     def setUp(self):
-        """Set up an isolated, temporary text database for clean state testing."""
-        self.test_csv_path = os.path.join(os.path.dirname(__file__), "barang.csv")
-        
-        # Override the routing database instance file target
-        self.original_file_path = db.file_path
-        db.file_path = self.test_csv_path
-        
-        # Seed fresh, structured test data matching your exact UI layout
-        self.headers = [
-            "id", "kode", "nama", "categoryId", "mitra", "tipe", 
-            "stok", "modal", "p1", "p2", "p3", "p4", 
-            "lokasiItem", "lokasiStock", "notes", "version"
-        ]
-        
-        with open(self.test_csv_path, mode='w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(self.headers)
-            # Row 1: Item ID 1068 (Matches your user interface target data)
-            writer.writerow([
-                "1068", "008321-29", "BALON HA", "1", "Mitra A", "Barang",
-                "10", "21800", "34500", "24000", "25000", "26200",
-                "Rak A-1", "Box 12", "Catatan Awal", "0"
-            ])
-            
-        # Clear out synchronization matrices
-        sync.MUTATION_STATES["barang"] = 0.0
-        
-        # Boot up the application instance test context wrapper
+        self.table = TableData(
+            rows=[SEED_ITEM],
+            next_id=1069,
+            unique_columns=("kode",),
+            required_columns=("kode", "nama"),
+            defaults=BARANG_DEFAULTS,
+        )
+        self.original_db = barang_route.db
+        barang_route.db = SupabaseEngine(
+            BARANG, client=FakeSupabaseClient({"barang": self.table})
+        )
+
+        MUTATION_STATES["barang"] = 0.0
         self.app = create_app()
         self.client = self.app.test_client()
 
     def tearDown(self):
-        """Clean up the system memory pointers and erase the scratch database."""
-        db.file_path = self.original_file_path
-        if os.path.exists(self.test_csv_path):
-            os.remove(self.test_csv_path)
-
-    # ==========================================================================
-    # TESTS
-    # ==========================================================================
+        barang_route.db = self.original_db
 
     def test_1_get_items(self):
-        """Ensure GET /api/barang streams records and appends system sync metrics."""
+        """GET /api/barang returns the list plus sync metadata."""
         response = self.client.get('/api/barang')
         self.assertEqual(response.status_code, 200)
-        
+
         payload = response.get_json()
         self.assertIn("data", payload)
         self.assertIn("last_mutation_time", payload)
@@ -61,59 +63,43 @@ class POSBackendTestCase(unittest.TestCase):
         self.assertEqual(payload["data"][0]["nama"], "BALON HA")
 
     def test_2_successful_update(self):
-        """Verify successful item mutations commit cleanly and increment versions."""
-        update_payload = {
+        """A normal update (no version field any more) commits cleanly."""
+        response = self.client.post('/api/barang/update', json={
             "id": "1068",
-            "version": "0",  # Matching current version in CSV
             "nama": "BALON HA EDITED",
             "stok": "15",
             "modal": "21800",
-            "p1": "35000"
-        }
-        
-        response = self.client.post('/api/barang/update', json=update_payload)
+            "p1": "35000",
+        })
         self.assertEqual(response.status_code, 200)
-        
-        # Verify changes wrote through directly to disk
-        with open(self.test_csv_path, mode='r', encoding='utf-8') as f:
-            rows = list(csv.DictReader(f))
-            self.assertEqual(rows[0]["nama"], "BALON HA EDITED")
-            self.assertEqual(rows[0]["stok"], "15")
-            self.assertEqual(rows[0]["version"], "1")  # Incremented!
 
-    def test_3_optimistic_concurrency_conflict(self):
-        """Enforce OCC: Outdated versions MUST reject edits with a 409 Conflict."""
-        conflict_payload = {
-            "id": "1068",
-            "version": "999",  # Completely out-of-sync version
-            "nama": "HACKED ROW STATE",
-            "stok": "0"
-        }
-        
-        response = self.client.post('/api/barang/update', json=conflict_payload)
-        
-        # System must catch the concurrency trap and deny disk access
-        self.assertEqual(response.status_code, 409)
-        self.assertIn("conflict", response.get_json()["status"])
+        self.assertEqual(self.table.rows[0]["nama"], "BALON HA EDITED")
+        self.assertEqual(self.table.rows[0]["stok"], 15)
 
-    def test_4_global_sync_check(self):
-        """Validate that database changes trigger immediate synchronization updates."""
-        # Step A: Capture original baseline stamp
+    def test_3_update_missing_id_is_400(self):
+        response = self.client.post('/api/barang/update', json={"nama": "No Id"})
+        self.assertEqual(response.status_code, 400)
+
+    def test_4_update_missing_row_is_404(self):
+        response = self.client.post('/api/barang/update', json={
+            "id": "999999", "nama": "Ghost"
+        })
+        self.assertEqual(response.status_code, 404)
+
+    def test_5_global_sync_check(self):
+        """A successful mutation must bump the entity's sync clock forward."""
         initial_matrix = self.client.get('/api/sync-check').get_json()["matrix"]
         initial_time = initial_matrix.get("barang", 0.0)
-        
-        # Step B: Perform a valid mutation to bump the system clock
+
         self.client.post('/api/barang/update', json={
-            "id": "1068",
-            "version": "0",
-            "nama": "BALON HA PART TWO"
+            "id": "1068", "nama": "BALON HA PART TWO"
         })
-        
-        # Step C: Re-query matrix to ensure timestamp progressed forward
+
         post_matrix = self.client.get('/api/sync-check').get_json()["matrix"]
         updated_time = post_matrix.get("barang", 0.0)
-        
-        self.assertTrue(updated_time > initial_time)
+
+        self.assertGreater(updated_time, initial_time)
+
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)
