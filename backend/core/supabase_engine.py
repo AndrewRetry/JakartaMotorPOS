@@ -49,7 +49,7 @@ def to_database_record(payload: dict, spec: TableSpec) -> dict:
     """
     
     record = {}
-    for field, value in payload.items()
+    for field, value in payload.items():
         column = to_database_column(field)
         if column == "id":
             continue
@@ -116,14 +116,14 @@ class SupabaseEngine:
     
 # ----------------------------------------------------------------- writes
 
-    def create_record(self, payload = dict):
+    def create_record(self, payload: dict):
         """Insert a record, id is assigned by postgres
         Returns (record, 201)"""
 
         try: 
             values = to_database_record(payload, self.spec)
         except ValueError as error:
-            return {"status": "error", "message": "str(error)"}, 400
+            return {"status": "error", "message": str(error)}, 400
         
         try:
             response = self._table.insert(values).execute()
@@ -138,7 +138,7 @@ class SupabaseEngine:
         try:
             values = to_database_record(changes, self.spec)
         except ValueError as error:
-            return {"status": "error", "message": "str(error)"}, 400
+            return {"status": "error", "message": str(error)}, 400
         
         if not values:
             return {"status": "error", "message": "No fields to update"}, 400
@@ -174,7 +174,7 @@ class SupabaseEngine:
             "message": f"Record with id={record_id} not found",
         }, 404
     
-    def _error_response(self, error: APIError, operations: str):
+    def _error_response(self, error: APIError, operation: str):
         status, message = POSTGRES_ERROR_RESPONSES.get(error.code, (500, "Database error"))
         
         if status == 500:
