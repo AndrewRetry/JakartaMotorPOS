@@ -12,6 +12,7 @@ through the UI will collide with an existing id.
 import csv
 import os
 import sys
+from dotenv import load_dotenv, find_dotenv
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -82,6 +83,7 @@ def import_table(client, filename: str, spec: TableSpec) -> int:
     return len(rows)
 
 def main():
+    load_dotenv(find_dotenv())
     client = get_client()
     for filename, spec in IMPORTS:
         import_table(client, filename, spec)
