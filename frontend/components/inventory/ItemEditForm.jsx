@@ -17,8 +17,7 @@ export default function ItemEditForm({ formState, onChange, onSave, onCancel, is
 
     const fetchCategories = async () => {
       try {
-        const res = await fetch('/api/kategori');
-        const data = await res.json();
+        const data = await api.get('/kategori')
         if (!isMounted) return;
 
         // Only show active categories in the dropdown
