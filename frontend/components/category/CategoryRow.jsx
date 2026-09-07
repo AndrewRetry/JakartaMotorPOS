@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import ConfirmationModal from '../common/ConfirmationModal';
+import { api } from '../../lib/apiClient';
 
 /**
  * CategoryRow
@@ -14,21 +15,10 @@ export default function CategoryRow({ category, onEditCategory, onDeleteSuccess 
 
   const handleConfirmDelete = async () => {
     try {
-      setIsDeleting(true);
-
-      const res = await fetch(`/api/kategori/${category.id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const result = await res.json();
-
-      if (res.ok) {
+        setIsDeleting(true);
+        await api.delete(`/kategori/${category.id}`);
         setShowDeleteConfirm(false);
-        if (onDeleteSuccess) onDeleteSuccess(category.id);
-      } else {
-        alert(`Gagal menghapus: ${result.message || 'Kesalahan tidak diketahui'}`);
-      }
+        onDeleteSuccess?.(category.id);
     } catch (err) {
       alert(`Error: ${err.message}`);
     } finally {

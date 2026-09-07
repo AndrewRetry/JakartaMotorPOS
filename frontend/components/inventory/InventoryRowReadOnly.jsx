@@ -21,24 +21,9 @@ export default function InventoryRowReadOnly({ item, onEditItem, onDeleteSuccess
   const handleConfirmDelete = async () => {
     try {
       setIsDeleting(true);
-      
-      const res = await fetch(`/api/barang/${item.id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const result = await res.json();
-
-      if (res.ok) {
-        setShowDeleteConfirm(false);
-        // Notify parent component that deletion was successful
-        if (onDeleteSuccess) {
-          onDeleteSuccess(item.id);
-        }
-      } else {
-        console.error('Delete failed:', result);
-        alert(`Gagal menghapus: ${result.message || 'Kesalahan tidak diketahui'}`);
-      }
+      await api.delete(`/barang/${item.id}`);
+      setShowDeleteConfirm(false);
+      onDeleteSuccess?.(item.id);
     } catch (err) {
       console.error('Delete error:', err);
       alert(`Error: ${err.message}`);

@@ -22,20 +22,9 @@ export default function CustomerRow({ customer, onEditCustomer, onDeleteSuccess 
   const handleConfirmDelete = async () => {
     try {
       setIsDeleting(true);
-
-      const res = await fetch(`/api/customer/${customer.id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const result = await res.json();
-
-      if (res.ok) {
-        setShowDeleteConfirm(false);
-        if (onDeleteSuccess) onDeleteSuccess(customer.id);
-      } else {
-        alert(`Gagal menghapus: ${result.message || 'Kesalahan tidak diketahui'}`);
-      }
+      await api.delete(`/customer/${customer.id}`);
+      setShowDeleteConfirm(false);
+      onDeleteSuccess?.(customer.id);
     } catch (err) {
       alert(`Error: ${err.message}`);
     } finally {
