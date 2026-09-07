@@ -9,64 +9,25 @@ import CategoryFormModal from '../components/category/CategoryFormModal';
  * URL: /categories
  */
 export default function CategoriesScreen() {
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [totalCount, setTotalCount] = useState(0);
-  const [lastMutationTime, setLastMutationTime] = useState(null);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit'
   const [editingCategory, setEditingCategory] = useState(null);
 
-  const fetchCategories = async (q = '') => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams({ q: q.trim() });
-      const data = await res.json();
+  const {
+    records: categories,
+    totalCount,
+    error,
+    searchInput,
+    updateSearch,
+    refresh,
+    isInitialLoad,
+    isRefreshing,
+    isEmpty,
+  } = useEntitySearch('/kategori', {pageSize: 200});
+  useChangeNotifier('kategori', refresh);
 
-      setCategories(data.data || []);
-      setTotalCount(data.total || 0);
-      setLastMutationTime(data.last_mutation_time);
-    } catch (err) {
-      console.error('Fetch error:', err);
-      setCategories([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /**
-   * Initial load + lightweight background sync (mirrors DaftarBarangScreen)
-   */
-  useEffect(() => {
-    fetchCategories(searchQuery);
-
-    const interval = setInterval(async () => {
-      try {
-        
-        const data = await res.json();
-
-        if (data.last_mutation_time !== lastMutationTime) {
-          setCategories(data.data || []);
-          setTotalCount(data.total || 0);
-          setLastMutationTime(data.last_mutation_time);
-        }
-      } catch (err) {
-        console.error('Background sync error:', err);
-      }
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleSearch = (e) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    fetchCategories(query);
-  };
-
-  const handleRefresh = () => fetchCategories(searchQuery);
+  const handleRefresh = () => refresh();
 
   const handleOpenCreate = () => {
     setModalMode('create');
@@ -82,12 +43,11 @@ export default function CategoriesScreen() {
 
   const handleModalSave = () => {
     setModalOpen(false);
-    fetchCategories(searchQuery);
+    refresh();
   };
 
   const handleDeleteSuccess = (deletedId) => {
-    setCategories(prev => prev.filter(cat => cat.id !== deletedId));
-    setTotalCount(prev => Math.max(0, prev - 1));
+    refresh();
   };
 
   return (
@@ -124,46 +84,71 @@ export default function CategoriesScreen() {
       <input
         type="text"
         placeholder="Cari kategori berdasarkan kode atau nama..."
-        value={searchQuery}
-        onChange={handleSearch}
+        value={searchInput}
+        onChange={(event) => updateSearch(event.target.value)}
         className="w-full bg-[#141923] border border-[#1f293d] rounded-lg px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"
       />
+      {isRefreshing && (
+        <span
+          aria-hidden="true"
+          className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full
+                    border-2 border-slate-600 border-t-blue-400 animate-spin"
+        />
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="mx-4 sm:mx-6 my-4 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+          ⚠️ {error}
+        </div>
+      )}
+
+      {/* Loading State */}
+      {isInitialLoad && <TableSkeleton columns={5} />}
+
+      {/* Empty State */}
+      {isEmpty && (
+        <div className="flex flex-col items-center justify-center h-64 gap-4">
+          <div className="text-6xl">📭</div>
+          <div className="text-slate-400 text-center">
+            <p className="font-semibold mb-1">
+              {searchInput ? 'Tidak ada hasil' : 'Tidak ada data'}
+            </p>
+            <p className="text-sm">
+              {searchInput
+                ? `Tidak ditemukan pelanggan untuk "${searchInput}"`
+                : 'Klik "Tambah Pelanggan" untuk membuat pelanggan baru'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Table */}
-      <div className="bg-[#141923] border border-[#1f293d] rounded-lg overflow-hidden">
-        {loading && categories.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-slate-400">Memuat data...</div>
-        ) : categories.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-40 gap-2 text-slate-400">
-            <p className="font-semibold">Tidak ada kategori</p>
-            <p className="text-sm">Klik "Tambah Kategori" untuk membuat kategori baru</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[#1f293d] text-left">
-                  <th className="py-3 px-4 pl-5 font-semibold text-slate-300 text-[11px] uppercase tracking-wide">Kode</th>
-                  <th className="py-3 px-4 font-semibold text-slate-300 text-[11px] uppercase tracking-wide">Nama Kategori</th>
-                  <th className="py-3 px-4 font-semibold text-slate-300 text-[11px] uppercase tracking-wide">Deskripsi</th>
-                  <th className="py-3 px-4 font-semibold text-slate-300 text-[11px] uppercase tracking-wide">Status</th>
-                  <th className="py-3 px-4 font-semibold text-slate-300 text-[11px] uppercase tracking-wide text-center">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#1f293d]">
-                {categories.map(category => (
-                  <CategoryRow
-                    key={category.id}
-                    category={category}
-                    onEditCategory={handleOpenEdit}
-                    onDeleteSuccess={handleDeleteSuccess}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      {!isInitialLoad && !isEmpty && (
+        <div aria-busy={isRefreshing} className={`px-4 sm:px-6 py-4 overflow-x-auto transition-opacity duration-200 ${isRefreshing ? 'opacity-60' : 'opacity-100'}`}>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[#1f293d] text-left">
+                <th className="py-3 px-4 pl-5 font-semibold text-slate-300 text-[11px] uppercase tracking-wide">Kode</th>
+                <th className="py-3 px-4 font-semibold text-slate-300 text-[11px] uppercase tracking-wide">Nama Kategori</th>
+                <th className="py-3 px-4 font-semibold text-slate-300 text-[11px] uppercase tracking-wide">Deskripsi</th>
+                <th className="py-3 px-4 font-semibold text-slate-300 text-[11px] uppercase tracking-wide">Status</th>
+                <th className="py-3 px-4 font-semibold text-slate-300 text-[11px] uppercase tracking-wide text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#1f293d]">
+              {categories.map(category => (
+                <CategoryRow 
+                  key={category.id} 
+                  category={category} 
+                  onEditCategory={handleOpenEdit} 
+                  onDeleteSuccess={handleDeleteSuccess} 
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <CategoryFormModal
         isOpen={modalOpen}
