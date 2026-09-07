@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from core.supabase_engine import SupabaseEngine
 from core.schema import CUSTOMER
 from core.sync import get_mutation_time
+from core.auth import login_required, owner_required
 
 customer_bp = Blueprint("customer", __name__)
 
@@ -17,6 +18,7 @@ def _normalize_price_tier(raw_value, default="p1"):
     return val if val in VALID_PRICE_TIERS else default
 
 @customer_bp.route('/api/customer', methods=['GET'])
+@login_required
 def get_customers():
     """
     Fetches a search-filtered list of customers, matched against name or
@@ -35,6 +37,7 @@ def get_customers():
     }), 200
 
 @customer_bp.route('/api/customer/<customer_id>', methods=['GET'])
+@login_required
 def get_customer_by_id(customer_id):
     """Fetch a single customer by id"""
     customer = db.get_record(customer_id)
@@ -47,6 +50,7 @@ def get_customer_by_id(customer_id):
     return jsonify(customer), 200
 
 @customer_bp.route('/api/customer/create', methods=['POST'])
+@login_required
 def create_customer():
     """Create a customer"""
     payload = request.get_json(silent=True)
@@ -82,6 +86,7 @@ def create_customer():
     }), 201
 
 @customer_bp.route('/api/customer/update', methods=['POST'])
+@login_required
 def update_customer():
     """Update a customer"""
     payload = request.get_json(silent=True)
@@ -112,6 +117,7 @@ def update_customer():
     }), 200        
     
 @customer_bp.route('/api/customer/<customer_id>', methods=['DELETE'])
+@owner_required
 def delete_customer(customer_id):
     """Delete a customer by id"""
     result, status_code = db.delete_record(customer_id)

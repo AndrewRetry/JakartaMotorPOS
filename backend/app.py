@@ -6,6 +6,7 @@ from routes.supplier import supplier_bp
 from routes.customer import customer_bp
 from routes.common import common_bp
 from core.sync import get_mutation_time
+from core.auth import login_required
 from datetime import timedelta
 
 def create_app():
@@ -28,6 +29,7 @@ def create_app():
 
     # Lightweight global sync-check checkpoint
     @app.route('/api/barang/sync-check', methods=['GET'])
+    @login_required
     def sync_check():
         client_sync_time = request.args.get('last_sync', type=float, default=0.0)
         current_server_time = get_mutation_time("barang")

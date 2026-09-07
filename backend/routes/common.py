@@ -1,9 +1,11 @@
 from flask import Blueprint, jsonify, request
 from core.sync import MUTATION_STATES
+from core.auth import login_required
 
 common_bp = Blueprint('common', __name__)
 
 @common_bp.route('/api/sync-check', methods=['GET'])
+@login_required
 def global_sync_check():
     """
     Lightweight multi-entity sync gate.
