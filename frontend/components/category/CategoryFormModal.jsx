@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { api } from '../../lib/apiClient';
 
 /**
  * CategoryFormModal
@@ -44,22 +45,12 @@ export default function CategoryFormModal({ isOpen, mode, initialData, onSave, o
       };
 
       const isEditMode = mode === 'edit';
-      const url = isEditMode ? '/api/kategori/update' : '/api/kategori/create';
+      const path = isEditMode ? '/kategori/update' : '/kategori/create';
       if (isEditMode) payload.id = initialData.id;
 
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      await api.post(path, payload);
+      onSave();
 
-      const result = await res.json();
-
-      if (res.ok) {
-        onSave();
-      } else {
-        setError(result.message || 'Gagal menyimpan kategori');
-      }
     } catch (err) {
       setError(err.message);
     } finally {

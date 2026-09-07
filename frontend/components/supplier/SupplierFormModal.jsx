@@ -45,22 +45,11 @@ export default function SupplierFormModal({ isOpen, mode, initialData, onSave, o
       };
 
       const isEditMode = mode === 'edit';
-      const url = isEditMode ? '/api/supplier/update' : '/api/supplier/create';
+      const path = isEditMode ? '/supplier/update' : '/supplier/create';
       if (isEditMode) payload.id = initialData.id;
 
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      const result = await res.json();
-
-      if (res.ok) {
-        onSave();
-      } else {
-        setError(result.message || 'Gagal menyimpan supplier');
-      }
+      await api.post(path, payload);
+      onSave();
     } catch (err) {
       setError(err.message);
     } finally {
