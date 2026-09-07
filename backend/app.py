@@ -9,6 +9,14 @@ from core.sync import get_mutation_time
 
 def create_app():
     app = Flask(__name__)
+    
+    app.secret_key = SECRET_KEY
+    app.config.update(
+        SESSION_COOKIE_HTTPONLY=True,   # JavaScript cannot read it (this is the point)
+        SESSION_COOKIE_SAMESITE="Lax",  # not sent on cross-site requests -> blocks CSRF
+        SESSION_COOKIE_SECURE=not FLASK_DEBUG,  # HTTPS-only outside local development
+        PERMANENT_SESSION_LIFETIME=timedelta(hours=12),  # a shop shift; default is 31 days
+    )
 
     # Register modular entity blueprints
     app.register_blueprint(barang_bp)
