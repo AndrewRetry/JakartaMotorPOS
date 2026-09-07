@@ -1,7 +1,6 @@
 import os
 from flask import Blueprint, request, jsonify, session
-from supabase import create_client, Client
-from gotrue.errors import AuthError
+from supabase import create_client, Client, AuthError
 
 # Initialize the Authentication Blueprint
 auth_bp = Blueprint('auth', __name__)
