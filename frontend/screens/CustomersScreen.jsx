@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import CustomerRow from '../components/customer/CustomerRow';
 import CustomerFormModal from '../components/customer/CustomerFormModal';
+import { useEntitySearch } from '../hooks/useEntitySearch';
 
 /**
  * CustomersScreen
@@ -8,65 +9,22 @@ import CustomerFormModal from '../components/customer/CustomerFormModal';
  * URL: /customers
  */
 export default function CustomersScreen() {
-  const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchInput, setSearchInput] = useState('');
-  const [activeQuery, setActiveQuery] = useState('');
-  const [totalCount, setTotalCount] = useState(0);
-  const [lastMutationTime, setLastMutationTime] = useState(null);
-
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit'
   const [editingCustomer, setEditingCustomer] = useState(null);
 
-  const fetchCustomers = async (q = '') => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams({ q: q.trim() });
-
-      const data = await res.json();
-
-      setCustomers(data.data || []);
-      setTotalCount(data.total || 0);
-      setLastMutationTime(data.last_mutation_time);
-    } catch (err) {
-      console.error('Fetch error:', err);
-      setCustomers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /**
-   * Refetch whenever the committed search query changes, and keep a
-   * lightweight background sync running (mirrors SupplierScreen)
-   */
-  useEffect(() => {
-    fetchCustomers(activeQuery);
-
-    const interval = setInterval(async () => {
-      try {
-        
-        const data = await res.json();
-
-        if (data.last_mutation_time !== lastMutationTime) {
-          setCustomers(data.data || []);
-          setTotalCount(data.total || 0);
-          setLastMutationTime(data.last_mutation_time);
-        }
-      } catch (err) {
-        console.error('Background sync error:', err);
-      }
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [activeQuery]);
-
-  const handleSearchSubmit = () => setActiveQuery(searchInput);
-
-  const handleSearchKeyDown = (e) => {
-    if (e.key === 'Enter') handleSearchSubmit();
-  };
+  const {
+    records: customers,
+    totalCount,
+    error,
+    searchInput,
+    updateSearch,
+    refresh,
+    isInitialLoad,
+    isRefreshing,
+    isEmpty,
+  } = useEntitySearch('/customer', {pageSize: 200});
+  useChangeNotifier('customer', refresh);
 
   const handleOpenCreate = () => {
     setModalMode('create');
@@ -82,12 +40,11 @@ export default function CustomersScreen() {
 
   const handleModalSave = () => {
     setModalOpen(false);
-    fetchCustomers(activeQuery);
+    refresh();
   };
 
   const handleDeleteSuccess = (deletedId) => {
-    setCustomers(prev => prev.filter(cust => cust.id !== deletedId));
-    setTotalCount(prev => Math.max(0, prev - 1));
+    refresh();
   };
 
   return (
@@ -115,39 +72,55 @@ export default function CustomersScreen() {
               type="text"
               placeholder="Cari nama atau no. telepon..."
               value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-              className="w-full bg-[#141923] border border-[#2b384e] rounded-lg pl-11 pr-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"
+              onChange={(event) => updateSearch(event.target.value)}
+              className="w-full bg-[#141923] border border-[#2b384e] rounded-lg pl-11 pr-11 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"
             />
+            {isRefreshing && (
+              <span
+                aria-hidden="true"
+                className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full
+                          border-2 border-slate-600 border-t-blue-400 animate-spin"
+              />
+            )}
           </div>
-          <button
-            onClick={handleSearchSubmit}
-            className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded-lg transition-all"
-          >
-            Cari
-          </button>
         </div>
       </div>
-
-      {/* Loading State */}
-      {loading && customers.length === 0 && (
-        <div className="flex items-center justify-center h-64 text-slate-400">Memuat data...</div>
+      
+      {/* Error State */}
+      {error && (
+        <div className="mx-4 sm:mx-6 my-4 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+          ⚠️ {error}
+        </div>
       )}
 
+      {/* Loading State */}
+      {isInitialLoad && <TableSkeleton columns={5} />}
+
       {/* Empty State */}
-      {!loading && customers.length === 0 && (
+      {isEmpty && (
         <div className="flex flex-col items-center justify-center h-64 gap-4">
           <div className="text-6xl">📭</div>
           <div className="text-slate-400 text-center">
-            <p className="font-semibold mb-1">Tidak ada data</p>
-            <p className="text-sm">Klik "Tambah Pelanggan" untuk membuat pelanggan baru</p>
+            <p className="font-semibold mb-1">
+              {searchInput ? 'Tidak ada hasil' : 'Tidak ada data'}
+            </p>
+            <p className="text-sm">
+              {searchInput
+                ? `Tidak ditemukan pelanggan untuk "${searchInput}"`
+                : 'Klik "Tambah Pelanggan" untuk membuat pelanggan baru'}
+            </p>
           </div>
         </div>
       )}
 
       {/* Table */}
-      {!loading && customers.length > 0 && (
-        <div className="px-6 py-4 overflow-x-auto">
+      {!isInitialLoad && !isEmpty && (
+        <div
+          aria-busy={isRefreshing}
+          className={`px-4 sm:px-6 py-4 overflow-x-auto transition-opacity duration-200 ${
+            isRefreshing ? 'opacity-60' : 'opacity-100'
+          }`}
+        >
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[#1f293d] text-left">

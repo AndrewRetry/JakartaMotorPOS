@@ -1,161 +1,62 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import InventoryRowReadOnly from '../components/inventory/InventoryRowReadOnly';
+import TableSkeleton from '../components/common/TableSkeleton';
+import { useEntitySearch } from '../hooks/useEntitySearch';
+
+const PAGE_SIZE = 50;
 
 /**
- * DaftarBarangScreen - Inventory List with Horizontal Scrolling
- * Features:
- * - Fetches paginated items from backend
- * - Displays table with horizontal scroll (invisible scrollbar)
- * - Supports search filtering
- * - Edit and delete operations via row actions
+ * Daftar Barang - the inventory list.
+ *
+ * Search, pagination and refresh all live in useEntitySearch; this file is
+ * only responsible for laying the results out.
  */
-export default function DaftarBarangScreen({ onBack, onEditItem, onCreateItem }) {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [offset, setOffset] = useState(0);
-  const [limit] = useState(50);
-  const [totalCount, setTotalCount] = useState(0);
-  const tableContainerRef = useRef(null);
-
-  const pageCount = Math.ceil(totalCount / limit);
-  const currentPage = Math.floor(offset / limit) + 1;
-
-  /**
-   * Fetch items from backend with pagination and search
-   */
-  const fetchItems = async (searchTerm = '', pageOffset = 0) => {
-    setLoading(true);
-    setError(null);
-    try {
-      // Build query string with URLSearchParams for proper encoding
-      const params = new URLSearchParams({
-        q: searchTerm.trim(),
-        limit: limit.toString(),
-        offset: pageOffset.toString()
-      });
-
-      
-      
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      // Backend returns "data" key, not "items"
-      setItems(data.data || []);
-      setTotalCount(data.total || 0);
-      setOffset(pageOffset);
-    } catch (err) {
-      console.error('Failed to fetch items:', err);
-      setError(err.message);
-      setItems([]);
-      setTotalCount(0);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /**
-   * Initial load on component mount
-   */
-  useEffect(() => {
-    fetchItems(searchQuery, 0);
-  }, []);
-
-  /**
-   * Handle search input change
-   */
-  const handleSearch = (e) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    setOffset(0);
-    // Fetch with new search term and reset offset
-    fetchItems(query, 0);
-  };
-
-  /**
-   * Refresh data
-   */
-  const handleRefresh = () => {
-    fetchItems(searchQuery, offset);
-  };
-
-  /**
-   * Go to previous page
-   */
-  const handlePrevPage = () => {
-    if (offset > 0) {
-      const newOffset = Math.max(0, offset - limit);
-      setOffset(newOffset);
-      fetchItems(searchQuery, newOffset);
-    }
-  };
-
-  /**
-   * Go to next page
-   */
-  const handleNextPage = () => {
-    if (offset + limit < totalCount) {
-      const newOffset = offset + limit;
-      setOffset(newOffset);
-      fetchItems(searchQuery, newOffset);
-    }
-  };
-
-  /**
-   * Handle successful delete
-   */
-  const handleDeleteSuccess = () => {
-    fetchItems(searchQuery, offset);
-  };
-
-  /**
-   * Navigate to edit page
-   */
-  const handleNavigateToEdit = (itemId) => {
-    onEditItem(itemId);
-  };
-
-  /**
-   * Navigate to create page
-   */
-  const handleNavigateToCreate = () => {
-    onCreateItem();
-  };
+export default function DaftarBarangScreen({ onEditItem, onCreateItem }) {
+  const {
+    records: items,
+    totalCount,
+    error,
+    searchInput,
+    updateSearch,
+    refresh,
+    isInitialLoad,
+    isRefreshing,
+    isEmpty,
+    pageIndex,
+    pageCount,
+    goToPreviousPage,
+    goToNextPage,
+  } = useEntitySearch('/barang', { pageSize: PAGE_SIZE });
 
   return (
     <div className="bg-[#0f131c] rounded-lg border border-[#1f293d] overflow-hidden flex flex-col h-full">
-      {/* Header Section */}
-      <div className="px-6 py-6 border-b border-[#1f293d] bg-[#141923]">
-        <div className="flex items-start justify-between mb-6">
+      <div className="px-4 sm:px-6 py-4 sm:py-6 border-b border-[#1f293d] bg-[#141923]">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4 sm:mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-3">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-100 flex items-center gap-3">
               <span className="text-slate-400">📦</span> Data Barang
             </h1>
             <p className="text-sm text-slate-400 mt-1">
-              Total: <span className="font-mono font-semibold text-slate-200">{totalCount.toLocaleString('id-ID')}</span> items
+              Total:{' '}
+              <span className="font-mono font-semibold text-slate-200">
+                {totalCount.toLocaleString('id-ID')}
+              </span>{' '}
+              item
             </p>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex items-center gap-3">
-            {/* Refresh Button */}
             <button
-              onClick={handleRefresh}
-              disabled={loading}
-              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded transition-all disabled:opacity-50 flex items-center gap-2"
+              onClick={refresh}
+              disabled={isRefreshing}
+              className="px-4 py-2 min-h-[44px] bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded transition-all disabled:opacity-50 flex items-center gap-2"
               title="Refresh data"
             >
               <span>🔄</span> Refresh
             </button>
-
-            {/* Create Button */}
             <button
-              onClick={handleNavigateToCreate}
-              className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-semibold rounded transition-all flex items-center gap-2"
+              onClick={onCreateItem}
+              className="px-4 py-2 min-h-[44px] bg-green-600 hover:bg-green-500 text-white font-semibold rounded transition-all flex items-center gap-2"
             >
               <span>➕</span> Tambah Barang
             </button>
@@ -163,62 +64,59 @@ export default function DaftarBarangScreen({ onBack, onEditItem, onCreateItem })
         </div>
 
         {/* Search Bar */}
-        <div>
+        <div className="relative">
           <input
-            type="text"
-            placeholder="Cari kode, nama, atau kategori..."
-            value={searchQuery}
-            onChange={handleSearch}
-            className="w-full bg-[#0f131c] border border-[#2b384e] rounded-lg px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"
+            type="search"
+            placeholder="Cari kode, nama, atau mitra..."
+            value={searchInput}
+            onChange={(event) => updateSearch(event.target.value)}
+            className="w-full bg-[#0f131c] border border-[#2b384e] rounded-lg px-4 pr-11 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"
           />
+          {isRefreshing && (
+            <span
+              aria-hidden="true"
+              className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border-2 border-slate-600 border-t-blue-400 animate-spin"
+            />
+          )}
         </div>
       </div>
-
-      {/* Error State */}
+      
+      {/* Error State */}   
       {error && (
-        <div className="px-6 py-4 bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded">
+        <div className="mx-4 sm:mx-6 mt-4 px-4 py-3 bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded">
           ⚠️ {error}
         </div>
       )}
-
+      
       {/* Loading State */}
-      {loading && items.length === 0 && (
-        <div className="flex items-center justify-center h-64">
-          <div className="text-slate-400">Memuat data...</div>
-        </div>
-      )}
+      {isInitialLoad && <TableSkeleton columns={7} rows={8} />}
 
       {/* Empty State */}
-      {!loading && items.length === 0 && (
-        <div className="flex flex-col items-center justify-center h-64 gap-4">
+      {isEmpty && (
+        <div className="flex flex-col items-center justify-center h-64 gap-4 px-6">
           <div className="text-6xl">📭</div>
           <div className="text-slate-400 text-center">
-            <p className="font-semibold mb-1">Tidak ada data</p>
-            <p className="text-sm">Klik "Tambah Barang" untuk membuat item baru</p>
+            <p className="font-semibold mb-1">
+              {searchInput ? 'Tidak ada hasil' : 'Tidak ada data'}
+            </p>
+            <p className="text-sm">
+              {searchInput
+                ? `Tidak ditemukan barang untuk "${searchInput}"`
+                : 'Klik "Tambah Barang" untuk membuat item baru'}
+            </p>
           </div>
         </div>
       )}
 
-      {/* Table Section with Horizontal Scrollbar (Hidden) */}
-      {!loading && items.length > 0 && (
+      {/* Table */}
+      {!isInitialLoad && !isEmpty && (
         <>
-          {/* Horizontal Scroll Container - Invisible Scrollbar */}
           <div
-            ref={tableContainerRef}
-            className="flex-1 overflow-x-auto px-6 py-4"
-            style={{
-              scrollBehavior: 'smooth',
-              scrollbarWidth: 'none', // Firefox
-              msOverflowStyle: 'none', // IE and Edge
-            }}
+            aria-busy={isRefreshing}
+            className={`flex-1 overflow-x-auto px-4 sm:px-6 py-4 transition-opacity duration-200 ${
+              isRefreshing ? 'opacity-60' : 'opacity-100'
+            }`}
           >
-            {/* Hide scrollbar for Chrome, Safari, and Opera */}
-            <style>{`
-              .scroll-container::-webkit-scrollbar {
-                display: none;
-              }
-            `}</style>
-
             <table className="w-full text-sm whitespace-nowrap">
               <thead>
                 <tr className="border-b border-[#1f293d] text-left sticky top-0 bg-[#141923]">
@@ -242,34 +140,33 @@ export default function DaftarBarangScreen({ onBack, onEditItem, onCreateItem })
                   <InventoryRowReadOnly
                     key={item.id}
                     item={item}
-                    onEditItem={handleNavigateToEdit}
-                    onDeleteSuccess={handleDeleteSuccess}
-                    isConflictActive={false}
+                    onEditItem={onEditItem}
+                    onDeleteSuccess={refresh}
                   />
                 ))}
               </tbody>
             </table>
           </div>
 
-          {/* Pagination Controls */}
-          <div className="px-6 py-6 border-t border-[#1f293d] bg-[#141923] flex items-center justify-between">
+          <div className="px-4 sm:px-6 py-4 sm:py-6 border-t border-[#1f293d] bg-[#141923] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="text-sm text-slate-400">
-              Halaman <span className="font-semibold text-slate-300">{currentPage}</span> dari{' '}
-              <span className="font-semibold text-slate-300">{pageCount || 1}</span> ({totalCount} total)
+              Halaman <span className="font-semibold text-slate-300">{pageIndex + 1}</span> dari{' '}
+              <span className="font-semibold text-slate-300">{pageCount}</span>{' '}
+              ({totalCount.toLocaleString('id-ID')} total)
             </div>
 
             <div className="flex gap-2">
               <button
-                onClick={handlePrevPage}
-                disabled={offset === 0}
-                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded disabled:opacity-50 transition-all"
+                onClick={goToPreviousPage}
+                disabled={pageIndex === 0}
+                className="px-4 py-2 min-h-[44px] bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded disabled:opacity-50 transition-all"
               >
                 ← Sebelumnya
               </button>
               <button
-                onClick={handleNextPage}
-                disabled={offset + limit >= totalCount}
-                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded disabled:opacity-50 transition-all"
+                onClick={goToNextPage}
+                disabled={pageIndex >= pageCount - 1}
+                className="px-4 py-2 min-h-[44px] bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold rounded disabled:opacity-50 transition-all"
               >
                 Selanjutnya →
               </button>

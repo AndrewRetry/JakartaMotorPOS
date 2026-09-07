@@ -1,12 +1,40 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Icons } from '../components/common/Icons';
 
 export default function DataMasterHubScreen({ onSelectSubView }) {
+
+  const COUNT_SOURCES = [
+    { id: 'barang', path: '/barang', unit: 'item' },
+    { id: 'kategori', path: '/kategori', unit: 'kategori' },
+    { id: 'supplier', path: '/supplier', unit: 'supplier' },
+    { id: 'pelanggan', path: '/customer', unit: 'pelanggan' },
+  ];
+
+  const [counts, setCounts] = useState({});
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.all(
+      COUNT_SOURCES.map(({id, path}) => 
+        api.get(`${path}?limit=1`)
+          .then((payload) => [id, payload.total])
+          .catch(() => [id, null]),
+      ),
+    ).then((entries) => {
+      if (isMounted) {
+        setCounts(Object.fromEntries(entries));
+      }
+    });
+    
+    return () => { isMounted = false; };
+  }, []);
+
   const directoryCards = [
-    { id: 'barang', title: 'Daftar Barang', desc: 'Kelola produk dan barang dagangan', count: '20.494 item', color: 'border-blue-500/30 text-blue-400 bg-blue-500/5', active: true, subView: 'daftar-barang' },
-    { id: 'kategori', title: 'Kategori', desc: 'Kelompok dan kategori barang', count: '1 kategori', color: 'border-purple-500/30 text-purple-400 bg-purple-500/5', active: true, subView: 'kategori' },
-    { id: 'supplier', title: 'Supplier', desc: 'Data pemasok barang', count: '89 supplier', color: 'border-amber-500/30 text-amber-400 bg-amber-500/5', active: true, subView: 'supplier' },
-    { id: 'pelanggan', title: 'Pelanggan', desc: 'Data pelanggan toko', count: '9 pelanggan', color: 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5', active: true, subView: 'pelanggan' },
+    { id: 'barang', title: 'Daftar Barang', desc: 'Kelola produk dan barang dagangan', count: counts.barang == null ? '—' : `${counts.barang.toLocaleString('id-ID')} item`, color: 'border-blue-500/30 text-blue-400 bg-blue-500/5', active: true, subView: 'daftar-barang' },
+    { id: 'kategori', title: 'Kategori', desc: 'Kelompok dan kategori barang', count: counts.kategori == null ? '—' : `${counts.kategori.toLocaleString('id-ID')} kategori`, color: 'border-purple-500/30 text-purple-400 bg-purple-500/5', active: true, subView: 'kategori' },
+    { id: 'supplier', title: 'Supplier', desc: 'Data pemasok barang', count: counts.supplier == null ? '—' : `${counts.supplier.toLocaleString('id-ID')} supplier`, color: 'border-amber-500/30 text-amber-400 bg-amber-500/5', active: true, subView: 'supplier' },
+    { id: 'pelanggan', title: 'Pelanggan', desc: 'Data pelanggan toko', count: counts.pelanggan == null ? '—' : `${counts.pelanggan.toLocaleString('id-ID')} pelanggan`, color: 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5', active: true, subView: 'pelanggan' },
     { id: 'harga', title: 'Harga Bertingkat', desc: 'Atur harga berdasarkan level', count: 'Atur Level', color: 'border-pink-500/30 text-pink-400 bg-pink-500/5', active: false },
   ];
 
