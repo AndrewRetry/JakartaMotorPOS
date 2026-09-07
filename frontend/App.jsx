@@ -17,6 +17,7 @@ export default function App() {
   const [viewState, setViewState] = useState('hub'); // 'hub', 'barang', 'kategori', 'supplier', 'pelanggan', 'create', 'edit', or menu name
   const [editingItemId, setEditingItemId] = useState(null); // For /barang/edit?id=N
   const { user, isCheckingSession } = useAuth();
+  const [isNavOpen, setIsNavOpen] = useState(false);
 
   if (isCheckingSession) return null;
   if (!user) return <LoginScreen />;
@@ -200,10 +201,22 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-[#0f131c] text-slate-100 font-sans overflow-hidden antialiased">
-      <Sidebar activeMenu={currentMenu} onMenuChange={handleMenuTransition} />
+      {isNavOpen && (
+        <button
+          aria-label="Tutup menu"
+          onClick={() => setIsNavOpen(false)}
+          className="fixed inset-0 z-40 bg-black/60 lg:hidden"
+        />
+      )}
+      <Sidebar     
+        isOpen={isNavOpen}
+        onNavigate={() => setIsNavOpen(false)}
+        activeMenu={currentMenu} 
+        onMenuChange={handleMenuTransition} 
+      />
       
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header title={headerTitle} />
+        <Header title={headerTitle} onOpenNav={() => setIsNavOpen(true)} />
         
         <main className="flex-1 overflow-y-auto p-8 bg-[#0f131c]">
           {/* Data Master Hub */}

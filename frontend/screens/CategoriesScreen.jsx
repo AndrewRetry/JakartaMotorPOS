@@ -53,7 +53,7 @@ export default function CategoriesScreen() {
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-fadeIn selection:bg-transparent">
       {/* Section Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
             <span className="text-purple-400"><Icons.Tag /></span> Kategori Barang

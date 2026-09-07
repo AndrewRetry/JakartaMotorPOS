@@ -50,7 +50,7 @@ export default function SupplierScreen() {
     <div className="min-h-screen bg-[#0f131c] text-slate-100">
       {/* Header Section */}
       <div className="sticky top-0 z-40 bg-[#0f131c] border-b border-[#1f293d]">
-        <div className="px-6 py-4 flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h1 className="text-2xl font-bold text-slate-100">Pengaturan Supplier</h1>
           <button
             onClick={handleOpenCreate}

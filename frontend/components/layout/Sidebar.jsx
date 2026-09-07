@@ -16,7 +16,12 @@ export default function Sidebar({ activeMenu, onMenuChange }) {
   ];
 
   return (
-    <aside className="w-64 bg-[#141923] border-r border-[#1f293d] flex flex-col justify-between p-4 shrink-0 selection:bg-transparent">
+    <aside
+      className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform
+                  lg:static lg:translate-x-0
+                  ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+                  bg-[#141923] border-r border-[#1f293d] flex flex-col justify-between p-4 shrink-0`}
+    >
       <div>
         <div className="flex items-center gap-3 px-2 py-4 border-b border-[#1f293d] mb-6">
           <div className="p-2 bg-blue-600 rounded-xl text-white shadow-md shadow-blue-500/10">
