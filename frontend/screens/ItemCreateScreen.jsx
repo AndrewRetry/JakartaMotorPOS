@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ItemEditForm from '../components/inventory/ItemEditForm';
 import { Icons } from '../components/common/Icons';
+import { api } from '../lib/apiClient';
 
 /**
  * ItemCreateScreen (FIXED)
@@ -95,23 +96,9 @@ export default function ItemCreateScreen({ onBack }) {
         notes: formState.notes.trim(),
       };
 
-      const res = await fetch('/api/barang/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      await api.post('/barang/create', payload);
+      setSuccessMessage('Item berhasil dibuat!');
 
-      const result = await res.json();
-
-      if (res.status === 201) {
-        setSuccessMessage('Item berhasil dibuat!');
-        setTimeout(() => {
-          setSuccessMessage(null);
-          onBack();
-        }, 1500);
-      } else {
-        setError(result.message || 'Gagal membuat item');
-      }
     } catch (err) {
       setError(err.message);
     } finally {
