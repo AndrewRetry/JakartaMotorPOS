@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from core.supabase_engine import SupabaseEngine
 from core.schema import SUPPLIER
 from core.sync import get_mutation_time
+from core.auth import login_required, owner_required
 
 supplier_bp = Blueprint("supplier", __name__)
 
@@ -16,6 +17,7 @@ def _normalize_bool(raw_value, default=True):
     return str(raw_value).strip().upper() in ("TRUE", "1", "YES", "AKTIF")
 
 @supplier_bp.route('/api/supplier', methods=['GET'])
+@login_required
 def get_suppliers():
     """
     Fetches a search-filtered list of suppliers, matched against name
@@ -34,6 +36,7 @@ def get_suppliers():
     }), 200
 
 @supplier_bp.route('/api/supplier/<supplier_id>', methods=['GET'])
+@login_required
 def get_supplier_by_id(supplier_id):
     """Fetch a single supplier by id"""
     supplier = db.get_record(supplier_id)
@@ -46,6 +49,7 @@ def get_supplier_by_id(supplier_id):
     return jsonify(supplier), 200
 
 @supplier_bp.route('/api/supplier/create', methods=['POST'])
+@login_required
 def create_supplier():
     """Create a supplier"""
     payload = request.get_json(silent=True)
@@ -84,6 +88,7 @@ def create_supplier():
     }), 201
 
 @supplier_bp.route('/api/supplier/update', methods=['POST'])
+@login_required
 def update_supplier():
     """Update a supplier"""
     payload = request.get_json(silent=True)
@@ -116,6 +121,7 @@ def update_supplier():
     }), 200        
     
 @supplier_bp.route('/api/supplier/<supplier_id>', methods=['DELETE'])
+@owner_required
 def delete_supplier(supplier_id):
     """Delete a supplier by id"""
     result, status_code = db.delete_record(supplier_id)

@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from core.supabase_engine import SupabaseEngine
 from core.schema import BARANG
 from core.sync import get_mutation_time
+from core.auth import login_required, owner_required
 
 barang_bp = Blueprint("barang", __name__)
 
@@ -45,6 +46,7 @@ def _normalize_barang_payload(payload: dict) -> dict:
     return normalized
 
 @barang_bp.route('/api/barang', methods=['GET'])
+@login_required
 def get_items():
     """
     Fetches a search-filtered list of items (barang), matched against kode,
@@ -63,6 +65,7 @@ def get_items():
     }), 200
 
 @barang_bp.route('/api/barang/<item_id>', methods=['GET'])
+@login_required
 def get_item_by_id(item_id):
     """Fetch a single item by id"""
     item = db.get_record(item_id)
@@ -75,6 +78,7 @@ def get_item_by_id(item_id):
     return jsonify(item), 200
 
 @barang_bp.route('/api/barang/create', methods=['POST'])
+@login_required
 def create_item():
     """Create a new barang (inventory item)"""
     payload = request.get_json(silent=True)
@@ -130,6 +134,7 @@ def create_item():
     }), 201
 
 @barang_bp.route('/api/barang/update', methods=['POST'])
+@login_required
 def update_item():
     """Update a barang item"""
     payload = request.get_json(silent=True)
@@ -159,6 +164,7 @@ def update_item():
     }), 200        
     
 @barang_bp.route('/api/barang/<item_id>', methods=['DELETE'])
+@owner_required
 def delete_item(item_id):
     """Delete an item by id"""
     result, status_code = db.delete_record(item_id)

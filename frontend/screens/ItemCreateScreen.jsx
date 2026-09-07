@@ -111,7 +111,7 @@ export default function ItemCreateScreen({ onBack }) {
       {/* Custom Header for Create Mode (don't use EditHeader) */}
       <div className="bg-gradient-to-r from-[#141923] to-[#0f131c] border-b border-[#1f293d]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             {/* Left: Back button + Title */}
             <div className="flex items-center gap-4">
               <button

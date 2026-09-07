@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from core.schema import KATEGORI 
 from core.supabase_engine import SupabaseEngine
 from core.sync import get_mutation_time
+from core.auth import login_required, owner_required
 
 kategori_bp = Blueprint('kategori', __name__)
 
@@ -26,6 +27,7 @@ def _next_kode(existing_records):
     return f"KTG-{max_seq + 1:03d}"
 
 @kategori_bp.route('/api/kategori', methods=['GET'])
+@login_required
 def get_categories():
     """Fetch a search filtered and paginated list"""
     records, total = db.list_records(
@@ -41,6 +43,7 @@ def get_categories():
     }), 200
     
 @kategori_bp.route('/api/kategori/<category_id>', methods=['GET'])
+@login_required
 def get_category_by_id(category_id):
     """Fetch a single category by id"""
     category = db.get_record(category_id)
@@ -53,6 +56,7 @@ def get_category_by_id(category_id):
     return jsonify(category), 200
 
 @kategori_bp.route('/api/kategori/create', methods=['POST'])
+@login_required
 def create_category():
     """Create a category"""
     payload = request.get_json(silent=True)
@@ -82,6 +86,7 @@ def create_category():
     }), 201
     
 @kategori_bp.route('/api/kategori/update', methods=['POST'])
+@login_required
 def update_category():
     """update a category"""
     payload = request.get_json(silent=True)
@@ -109,6 +114,7 @@ def update_category():
     }), 200
     
 @kategori_bp.route('/api/kategori/<category_id>', methods=['DELETE'])
+@owner_required
 def delete_category(category_id):
     """delete a category by id"""
     result, status_code = db.delete_record(category_id)

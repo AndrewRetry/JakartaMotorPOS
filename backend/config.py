@@ -16,3 +16,4 @@ def _flag(name: str, default: str = "False") -> bool:
 # Flask's debugger executes arbitrary code submitted from the browser, so it
 # stays off unless explicitly enabled for local development.
 FLASK_DEBUG = _flag("FLASK_DEBUG")
+SECRET_KEY = os.environ.get("SECRET_KEY")

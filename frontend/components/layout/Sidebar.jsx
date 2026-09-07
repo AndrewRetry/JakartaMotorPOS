@@ -1,7 +1,9 @@
 import React from 'react';
 import { Icons } from '../common/Icons';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Sidebar({ activeMenu, onMenuChange }) {
+  const { user, signOut } = useAuth();
   const links = [
     { name: 'Beranda', icon: <Icons.Home /> },
     { name: 'Data Master', icon: <Icons.Master /> },
@@ -14,7 +16,12 @@ export default function Sidebar({ activeMenu, onMenuChange }) {
   ];
 
   return (
-    <aside className="w-64 bg-[#141923] border-r border-[#1f293d] flex flex-col justify-between p-4 shrink-0 selection:bg-transparent">
+    <aside
+      className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform
+                  lg:static lg:translate-x-0
+                  ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+                  bg-[#141923] border-r border-[#1f293d] flex flex-col justify-between p-4 shrink-0`}
+    >
       <div>
         <div className="flex items-center gap-3 px-2 py-4 border-b border-[#1f293d] mb-6">
           <div className="p-2 bg-blue-600 rounded-xl text-white shadow-md shadow-blue-500/10">
@@ -45,14 +52,16 @@ export default function Sidebar({ activeMenu, onMenuChange }) {
       <div className="pt-4 border-t border-[#1f293d] flex flex-col gap-3">
         <div className="flex items-center gap-3 px-2">
           <div className="w-9 h-9 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-xs">
-            AU
+            {/* initials */}
+            {user.full_name.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase()}
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-200">Admin User</p>
-            <p className="text-[10px] text-slate-500 font-mono tracking-wider">ADMIN</p>
+            {/* label */}
+            {user.role === 'owner' ? 'PEMILIK' : 'STAF'}
           </div>
         </div>
-        <button className="w-full py-2 px-4 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 text-xs font-medium transition-all">
+        <button onClick={signOut}
+          className="w-full py-2 px-4 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 text-xs font-medium transition-all">
           ➔ Sign Out
         </button>
       </div>
