@@ -9,11 +9,17 @@ import CategoriesScreen from './screens/CategoriesScreen';
 import SupplierScreen from './screens/SupplierScreen';
 import CustomersScreen from './screens/CustomersScreen';
 import StubScreen from './screens/StubScreen';
+import { useAuth } from './context/AuthContext';
+import LoginScreen from './screens/LoginScreen';
 
 export default function App() {
   const [currentMenu, setCurrentMenu] = useState('Data Master');
   const [viewState, setViewState] = useState('hub'); // 'hub', 'barang', 'kategori', 'supplier', 'pelanggan', 'create', 'edit', or menu name
   const [editingItemId, setEditingItemId] = useState(null); // For /barang/edit?id=N
+  const { user, isCheckingSession } = useAuth();
+
+  if (isCheckingSession) return null;
+  if (!user) return <LoginScreen />;
 
   /**
    * 🧭 URL Routing Synchronization
