@@ -23,7 +23,6 @@ export default function CategoriesScreen() {
     try {
       setLoading(true);
       const params = new URLSearchParams({ q: q.trim() });
-      const res = await fetch(`/api/kategori?${params.toString()}`);
       const data = await res.json();
 
       setCategories(data.data || []);
@@ -45,8 +44,7 @@ export default function CategoriesScreen() {
 
     const interval = setInterval(async () => {
       try {
-        const params = new URLSearchParams({ q: searchQuery.trim() });
-        const res = await fetch(`/api/kategori?${params.toString()}`);
+        
         const data = await res.json();
 
         if (data.last_mutation_time !== lastMutationTime) {

@@ -23,7 +23,7 @@ export default function CustomersScreen() {
     try {
       setLoading(true);
       const params = new URLSearchParams({ q: q.trim() });
-      const res = await fetch(`/api/customer?${params.toString()}`);
+
       const data = await res.json();
 
       setCustomers(data.data || []);
@@ -46,8 +46,7 @@ export default function CustomersScreen() {
 
     const interval = setInterval(async () => {
       try {
-        const params = new URLSearchParams({ q: activeQuery.trim() });
-        const res = await fetch(`/api/customer?${params.toString()}`);
+        
         const data = await res.json();
 
         if (data.last_mutation_time !== lastMutationTime) {

@@ -29,9 +29,7 @@ export default function ItemEditScreen({ itemId, onBack }) {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(`/api/barang/${itemId}`);
-      if (!res.ok) throw new Error('Item not found');
-      const data = await res.json();
+      const data = await api.get(`/barang/${itemId}`);
       setItem(data);
       setFormState(data);
     } catch (err) {
@@ -53,27 +51,11 @@ export default function ItemEditScreen({ itemId, onBack }) {
       setIsSaving(true);
       setError(null);
       
-      // Don't send version - backend doesn't need it
       const payload = { ...formState };
-      delete payload.version; // Remove version if it exists
       
-      const res = await fetch('/api/barang/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      
-      const result = await res.json();
-      
-      if (res.status === 200) {
-        setSuccessMessage('Data berhasil disimpan');
-        setTimeout(() => {
-          setSuccessMessage(null);
-          onBack();
-        }, 1500);
-      } else {
-        setError(result.message || 'Gagal menyimpan data');
-      }
+      await api.post('/barang/create', payload);
+      setSuccessMessage('Data berhasil disimpan!');
+
     } catch (err) {
       setError(err.message);
     } finally {

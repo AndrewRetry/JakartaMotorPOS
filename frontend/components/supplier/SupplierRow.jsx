@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import ConfirmationModal from '../common/ConfirmationModal';
+import { api } from '../../lib/apiClient';
 
 /**
  * SupplierRow
@@ -13,20 +14,9 @@ export default function SupplierRow({ supplier, onEditSupplier, onDeleteSuccess 
   const handleConfirmDelete = async () => {
     try {
       setIsDeleting(true);
-
-      const res = await fetch(`/api/supplier/${supplier.id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const result = await res.json();
-
-      if (res.ok) {
-        setShowDeleteConfirm(false);
-        if (onDeleteSuccess) onDeleteSuccess(supplier.id);
-      } else {
-        alert(`Gagal menghapus: ${result.message || 'Kesalahan tidak diketahui'}`);
-      }
+      await api.delete(`/supplier/${supplier.id}`);
+      setShowDeleteConfirm(false);
+      onDeleteSuccess?.(supplier.id);
     } catch (err) {
       alert(`Error: ${err.message}`);
     } finally {

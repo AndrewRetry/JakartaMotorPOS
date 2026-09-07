@@ -23,7 +23,7 @@ export default function SupplierScreen() {
     try {
       setLoading(true);
       const params = new URLSearchParams({ q: q.trim() });
-      const res = await fetch(`/api/supplier?${params.toString()}`);
+
       const data = await res.json();
 
       setSuppliers(data.data || []);
@@ -46,8 +46,7 @@ export default function SupplierScreen() {
 
     const interval = setInterval(async () => {
       try {
-        const params = new URLSearchParams({ q: activeQuery.trim() });
-        const res = await fetch(`/api/supplier?${params.toString()}`);
+
         const data = await res.json();
 
         if (data.last_mutation_time !== lastMutationTime) {

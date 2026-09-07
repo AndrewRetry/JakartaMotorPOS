@@ -36,7 +36,7 @@ export default function DaftarBarangScreen({ onBack, onEditItem, onCreateItem })
         offset: pageOffset.toString()
       });
 
-      const response = await fetch(`/api/barang?${params.toString()}`);
+      
       
       if (!response.ok) {
         throw new Error(`API Error: ${response.status}`);
