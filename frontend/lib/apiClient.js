@@ -5,6 +5,8 @@
 
 const API_BASE_PATH = '/api';
 
+const SESSION_PROBE_PATHS = ['/auth/me', '/auth/login'];
+
 export class ApiError extends Error {
     constructor(status, message) {
         super(message);
@@ -23,14 +25,16 @@ async function request(path, { method = 'GET', body, signal } = {}) {
         body: body ? JSON.stringify(body) : undefined,
     });
 
-    if (response.status === 401) {
-        window.location.reload();   // session gone -> AuthContext re-checks -> LoginScreen
-    }
-
     // 204 No Content has no body to parse.
     const payload = response.status === 204 ? null : await response.json();
 
     if (!response.ok) {
+        const isSessionProbe = SESSION_PROBE_PATHS.some((probe) => path.startsWith(probe));
+
+        if (response.status === 401 && !isSessionProbe) {
+            window.location.reload();
+        }
+
         throw new ApiError(response.status, payload?.message ?? `Request failed (${response.status})`);
     }
     return payload;
