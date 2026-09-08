@@ -17,4 +17,4 @@ venv/
 !.env.example
 backend/.env
 
-/data
+/datacookies.txt

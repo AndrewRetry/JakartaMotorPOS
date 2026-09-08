@@ -56,7 +56,7 @@ export default function InventoryRowReadOnly({ item, onEditItem, onDeleteSuccess
             {/* Edit Button - Opens Full Page Edit Screen */}
             <button 
               onClick={() => onEditItem(item.id)}
-              className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded text-[10px] transition-all"
+              className="px-3 py-1 min-h-[44px] bg-blue-600 hover:bg-blue-500 text-white font-bold rounded text-[10px] transition-all"
               title="Edit item"
             >
               Edit
@@ -65,7 +65,7 @@ export default function InventoryRowReadOnly({ item, onEditItem, onDeleteSuccess
             {/* Delete Button - Opens Confirmation Modal */}
             <button 
               onClick={handleDeleteClick}
-              className="px-2 py-1 bg-red-600/30 hover:bg-red-600 text-red-400 hover:text-white rounded text-[10px] transition-all"
+              className="px-2 py-1 min-h-[44px] bg-red-600/30 hover:bg-red-600 text-red-400 hover:text-white rounded text-[10px] transition-all"
               title="Delete item"
             >
               🗑️

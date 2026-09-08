@@ -2,7 +2,7 @@ import React from 'react';
 import { Icons } from '../common/Icons';
 import { useAuth } from '../../context/AuthContext';
 
-export default function Sidebar({ activeMenu, onMenuChange }) {
+export default function Sidebar({ isOpen, onNavigate, activeMenu, onMenuChange }) {
   const { user, signOut } = useAuth();
   const links = [
     { name: 'Beranda', icon: <Icons.Home /> },
@@ -14,6 +14,13 @@ export default function Sidebar({ activeMenu, onMenuChange }) {
     { name: 'Laporan', icon: <Icons.Stock /> },
     { name: 'Pengaturan', icon: <Icons.Settings /> },
   ];
+
+  const initials = (user.full_name ?? "").split(" ").map((part) => part[0]).join("").slice(0,2).toUpperCase();
+
+  const handleMenuClick = (name) => {
+    onMenuChange(name);
+    onNavigate?.();
+  }
 
   return (
     <aside
@@ -35,7 +42,7 @@ export default function Sidebar({ activeMenu, onMenuChange }) {
           {links.map((link) => (
             <button
               key={link.name}
-              onClick={() => onMenuChange(link.name)}
+              onClick={() => handleMenuClick(link.name)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs transition-all duration-150 ${
                 activeMenu === link.name
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/10'
@@ -50,15 +57,11 @@ export default function Sidebar({ activeMenu, onMenuChange }) {
       </div>
 
       <div className="pt-4 border-t border-[#1f293d] flex flex-col gap-3">
-        <div className="flex items-center gap-3 px-2">
-          <div className="w-9 h-9 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-xs">
-            {/* initials */}
-            {user.full_name.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase()}
-          </div>
-          <div>
-            {/* label */}
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-slate-200 truncate">{user.full_name}</p>
+          <p className="text-[10px] text-slate-500 font-mono tracking-wider">
             {user.role === 'owner' ? 'PEMILIK' : 'STAF'}
-          </div>
+          </p>
         </div>
         <button onClick={signOut}
           className="w-full py-2 px-4 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 text-xs font-medium transition-all">

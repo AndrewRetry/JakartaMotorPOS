@@ -35,14 +35,14 @@ export default function SupplierRow({ supplier, onEditSupplier, onDeleteSuccess 
           <div className="flex items-center justify-center gap-1 opacity-80 group-hover:opacity-100 transition-all">
             <button
               onClick={() => onEditSupplier(supplier)}
-              className="p-1.5 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded transition-all"
+              className="p-1.5 min-h-[44px] text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded transition-all"
               title="Edit supplier"
             >
-              ✏️
+              Edit
             </button>
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-all"
+              className="p-1.5 min-h-[44px] text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-all"
               title="Hapus supplier"
             >
               🗑️
