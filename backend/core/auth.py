@@ -1,7 +1,7 @@
 """Session-based authentication and role checks."""
 
 from functools import wraps
-from flask import jsonify, Session
+from flask import jsonify, session
 
 OWNER_ROLE = "owner"
 
