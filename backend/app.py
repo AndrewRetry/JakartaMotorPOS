@@ -4,6 +4,7 @@ from routes.barang import barang_bp
 from routes.kategori import kategori_bp
 from routes.supplier import supplier_bp
 from routes.customer import customer_bp
+from routes.auth import auth_bp
 from routes.common import common_bp
 from core.sync import get_mutation_time
 from core.auth import login_required
@@ -26,6 +27,7 @@ def create_app():
     app.register_blueprint(supplier_bp)
     app.register_blueprint(customer_bp)
     app.register_blueprint(common_bp)
+    app.register_blueprint(auth_bp)
 
     # Lightweight global sync-check checkpoint
     @app.route('/api/barang/sync-check', methods=['GET'])

@@ -16,14 +16,14 @@ export function AuthProvider({children}) {
     }, []);
 
     const signIn = useCallback(async (email, password) => {
-        const payload = await api.post('auth/login', { email, password });
+        const payload = await api.post('/auth/login', { email, password });
         setUser(payload.user);
     }, []);
 
     const signOut = useCallback(async () => {
-        await api.post('auth/logout');
+        await api.post('/auth/logout');
         setUser(null);
-    })
+    }, [])
 
     return (
         <AuthContext.Provider value={{user, isCheckingSession, signIn, signOut}}>
