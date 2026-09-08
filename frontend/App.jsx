@@ -19,9 +19,6 @@ export default function App() {
   const { user, isCheckingSession } = useAuth();
   const [isNavOpen, setIsNavOpen] = useState(false);
 
-  if (isCheckingSession) return null;
-  if (!user) return <LoginScreen />;
-
   /**
    * 🧭 URL Routing Synchronization
    */
@@ -32,6 +29,10 @@ export default function App() {
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
+    syncAppStateFromURL();
   }, []);
 
   const syncAppStateFromURL = () => {
@@ -189,15 +190,14 @@ export default function App() {
 
   const handleBack = () => navigateTo('Data Master', 'hub');
 
-  useEffect(() => {
-    syncAppStateFromURL();
-  }, []);
-
   // Sub-screens that override the top header's title to match their breadcrumb
   const headerTitle = 
     viewState === 'kategori' ? 'Categories' :
     viewState === 'pelanggan' ? 'Customers' :
     currentMenu;
+
+  if (isCheckingSession) return null;
+  if (!user) return <LoginScreen />;
 
   return (
     <div className="flex h-screen bg-[#0f131c] text-slate-100 font-sans overflow-hidden antialiased">
