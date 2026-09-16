@@ -9,6 +9,7 @@ import CategoriesScreen from './screens/CategoriesScreen';
 import SupplierScreen from './screens/SupplierScreen';
 import CustomersScreen from './screens/CustomersScreen';
 import StubScreen from './screens/StubScreen';
+import BackupScreen from './screens/BackupScreen';
 import { useAuth } from './context/AuthContext';
 import LoginScreen from './screens/LoginScreen';
 
@@ -258,10 +259,16 @@ export default function App() {
             <CustomersScreen />
           )}
 
-          {/* Stub screens for other modules (Stok, Penjualan, etc.) */}
-          {viewState !== 'hub' && viewState !== 'barang' && viewState !== 'daftar-barang' && 
-           viewState !== 'edit' && viewState !== 'create' && viewState !== 'beranda' && 
-           viewState !== 'kategori' && viewState !== 'supplier' && viewState !== 'pelanggan' && (
+          {/* Pengaturan (Settings) */}
+          {viewState === 'pengaturan' && (
+            <BackupScreen />
+          )}
+
+          {/* Stub screens for modules that are not built yet */}
+          {viewState !== 'hub' && viewState !== 'barang' && viewState !== 'daftar-barang' &&
+           viewState !== 'edit' && viewState !== 'create' && viewState !== 'beranda' &&
+           viewState !== 'kategori' && viewState !== 'supplier' && viewState !== 'pelanggan' &&
+           viewState !== 'pengaturan' && (
             <StubScreen targetFeature={currentMenu} />
           )}
 
