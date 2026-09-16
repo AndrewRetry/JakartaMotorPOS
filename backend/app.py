@@ -4,6 +4,7 @@ from routes.barang import barang_bp
 from routes.kategori import kategori_bp
 from routes.supplier import supplier_bp
 from routes.customer import customer_bp
+from routes.backup import backup_bp
 from routes.auth import auth_bp
 from routes.common import common_bp
 from core.sync import get_mutation_time
@@ -19,6 +20,7 @@ def create_app():
         SESSION_COOKIE_SAMESITE="Lax",  # not sent on cross-site requests -> blocks CSRF
         SESSION_COOKIE_SECURE=not FLASK_DEBUG,  # HTTPS-only outside local development
         PERMANENT_SESSION_LIFETIME=timedelta(hours=12),  # a shop shift; default is 31 days
+        MAX_CONTENT_LENGTH=16 * 1024 * 1024, # reject uploads larger than 16MB
     )
 
     # Register modular entity blueprints
@@ -26,6 +28,7 @@ def create_app():
     app.register_blueprint(kategori_bp)
     app.register_blueprint(supplier_bp)
     app.register_blueprint(customer_bp)
+    app.register_blueprint(backup_bp)
     app.register_blueprint(common_bp)
     app.register_blueprint(auth_bp)
 
